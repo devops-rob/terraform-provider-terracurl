@@ -2,25 +2,50 @@ package provider
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func init() {
-	// Set descriptions to support markdown syntax, this will be used in document generation
-	// and the language server.
-	schema.DescriptionKind = schema.StringMarkdown
+const TerraformProviderProductUserAgent = "terraform-provider-terracurl"
 
-	// Customize the content of descriptions when output. For example you can add defaults on
-	// to the exported descriptions if present.
-	// schema.SchemaDescriptionBuilder = func(s *schema.Schema) string {
-	// 	desc := s.Description
-	// 	if s.Default != nil {
-	// 		desc += fmt.Sprintf(" Defaults to `%v`.", s.Default)
-	// 	}
-	// 	return strings.TrimSpace(desc)
-	// }
+// HTTPClient interface
+type HTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
+var (
+	Client HTTPClient
+)
+
+func init() {
+	Client = &http.Client{}
+}
+
+func Provider() *schema.Provider {
+	provider := &schema.Provider{
+
+		DataSourcesMap: map[string]*schema.Resource{
+			//"waypoint_project":        dataSourceProject(),
+			//"waypoint_runner_profile": dataSourceRunnerProfile(),
+		},
+		ResourcesMap: map[string]*schema.Resource{
+			//"waypoint_project":        resourceProject(),
+			//"waypoint_runner_profile": resourceRunnerProfile(),
+			terracurl_request: resourceCurl(),
+		},
+	}
+
+	//provider.ConfigureContextFunc = func(_ context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
+	//	config := Config{
+	//		Token:        d.Get("token").(string),
+	//		WaypointAddr: d.Get("waypoint_addr").(string),
+	//	}
+	//	return config.Client()
+	//}
+
+	return provider
 }
 
 func New(version string) func() *schema.Provider {
@@ -30,7 +55,7 @@ func New(version string) func() *schema.Provider {
 				"scaffolding_data_source": dataSourceScaffolding(),
 			},
 			ResourcesMap: map[string]*schema.Resource{
-				"scaffolding_resource": resourceScaffolding(),
+				"curl_request": resourceCurl(),
 			},
 		}
 
