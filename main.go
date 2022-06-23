@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 
+	terracurl "github.com/devops-rob/terraform-provider-terracurl/internal/provider"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
-	"github.com/hashicorp/terraform-provider-terracurl/internal/provider"
 )
 
 // Run "go generate" to format example terraform files and generate the docs for the registry/website
@@ -36,9 +36,9 @@ func main() {
 		Debug: debugMode,
 
 		// TODO: update this string with the full name of your provider as used in your configs
-		ProviderAddr: "registry.terraform.io/hashicorp/scaffolding",
+		ProviderAddr: "registry.terraform.io/devops-rob/terracurl",
 
-		ProviderFunc: provider.New(version),
+		ProviderFunc: terracurl.Provider,
 	}
 
 	plugin.Serve(opts)

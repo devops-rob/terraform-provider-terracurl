@@ -4,18 +4,16 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"io/ioutil"
+	"net/http"
 )
 
 func resourceCurl() *schema.Resource {
 	return &schema.Resource{
-		// This description is used by the documentation generator and the language server.
-		Description: "Sample resource in the Terraform provider scaffolding.",
+		Description: "A flexible Terraform provider for making API calls",
 
 		CreateContext: resourceCurlCreate,
 		ReadContext:   resourceCurlRead,
@@ -30,7 +28,6 @@ func resourceCurl() *schema.Resource {
 				ForceNew:    true,
 			},
 			"url": {
-				// This description is used by the documentation generator and the language server.
 				Description: "Api endpoint to call",
 				Type:        schema.TypeString,
 				Required:    true,
@@ -62,8 +59,15 @@ func resourceCurl() *schema.Resource {
 				Computed:    true,
 				Description: "JSON response received from request",
 			},
+			"response_codes": {
+				Type:        schema.TypeList,
+				Required:    true,
+				Description: "A list of expected response codes",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 			"destroy_url": {
-				// This description is used by the documentation generator and the language server.
 				Description: "Api endpoint to call",
 				Type:        schema.TypeString,
 				Required:    true,
@@ -79,9 +83,17 @@ func resourceCurl() *schema.Resource {
 				Optional:    true,
 			},
 			"destroy_headers": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeMap,
 				Optional:    true,
 				Description: "List of headers to attach to the API call",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"destroy_response_codes": {
+				Type:        schema.TypeList,
+				Required:    true,
+				Description: "A list of expected response codes for destroy operations",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -106,10 +118,25 @@ func defaultRequestData() RequestData {
 	}
 }
 
+type ResponseData struct {
+	responseBody string
+}
+
+func responseCodeChecker(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+
+	return false
+}
+
+var respBody ResponseData
+
 func resourceCurlCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	var diags diag.Diagnostics
-
 	id := d.Get("name").(string)
 	d.SetId(id)
 
@@ -146,13 +173,27 @@ func resourceCurlCreate(ctx context.Context, d *schema.ResourceData, meta interf
 	}
 
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, readErr := ioutil.ReadAll(resp.Body)
+	if readErr != nil {
+		return diag.FromErr(readErr)
+	}
 
-	d.Set("response", body)
+	respCodes := d.Get("response_codes").([]interface{})
+	code := fmt.Sprintf("%v", resp.StatusCode)
 
-	// write logs using the tflog package
-	// see https://pkg.go.dev/github.com/hashicorp/terraform-plugin-log/tflog
-	// for more information
+	stringConversionList := make([]string, len(respCodes))
+	for i, v := range respCodes {
+		stringConversionList[i] = fmt.Sprint(v)
+	}
+
+	if !responseCodeChecker(stringConversionList, code) {
+		return diag.Errorf(fmt.Sprintf("%s response received: %s", code, body))
+	}
+
+	respBody.responseBody = string(body)
+
+	d.Set("response", string(body))
+
 	tflog.Trace(ctx, "created a resource")
 
 	return diags
@@ -162,19 +203,18 @@ func resourceCurlRead(ctx context.Context, d *schema.ResourceData, meta interfac
 	// use the meta value to retrieve your client from the provider configure method
 	// client := meta.(*apiClient)
 
-	return diag.Errorf("not implemented")
+	var diags diag.Diagnostics
+	return diags
 }
 
 func resourceCurlUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	// use the meta value to retrieve your client from the provider configure method
-	// client := meta.(*apiClient)
 
-	return diag.Errorf("not implemented")
+	var diags diag.Diagnostics
+	return diags
+
 }
 
 func resourceCurlDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	// use the meta value to retrieve your client from the provider configure method
-	// client := meta.(*apiClient)
 
 	var diags diag.Diagnostics
 	id := d.Get("name").(string)
@@ -213,7 +253,22 @@ func resourceCurlDelete(ctx context.Context, d *schema.ResourceData, meta interf
 	}
 
 	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
+	body, readErr := ioutil.ReadAll(resp.Body)
+	if readErr != nil {
+		return diag.FromErr(readErr)
+	}
+
+	respCodes := d.Get("destroy_response_codes").([]interface{})
+	code := fmt.Sprintf("%v", resp.StatusCode)
+
+	stringConversionList := make([]string, len(respCodes))
+	for i, v := range respCodes {
+		stringConversionList[i] = fmt.Sprint(v)
+	}
+
+	if !responseCodeChecker(stringConversionList, code) {
+		return diag.Errorf(fmt.Sprintf("%s response received: %s", code, body))
+	}
 
 	return diags
 }

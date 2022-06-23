@@ -1,6 +1,6 @@
-name = waypoint
-organization = hashicorp-dev-advocates
-version = 0.2.2
+name = terracurl
+organization = devops-rob
+version = 0.1.0
 arch = darwin_amd64
 #arch = linux_amd64
 
