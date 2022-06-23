@@ -6,8 +6,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/jarcoal/httpmock"
-	"io/ioutil"
-	"net/http"
 	"testing"
 )
 
@@ -19,9 +17,6 @@ func TestAccresourceCurl(t *testing.T) {
 		"https://example.com",
 		httpmock.NewStringResponder(200, `{"name": "devopsrob"}`),
 	)
-	resp, _ := http.Get("https://example.com")
-	defer resp.Body.Close()
-	_, _ = ioutil.ReadAll(resp.Body)
 
 	resource.UnitTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },

@@ -26,7 +26,9 @@ func init() {
 func Provider() *schema.Provider {
 	provider := &schema.Provider{
 
-		DataSourcesMap: map[string]*schema.Resource{},
+		DataSourcesMap: map[string]*schema.Resource{
+			"terracurl_request": dataSourceCurlRequest(),
+		},
 		ResourcesMap: map[string]*schema.Resource{
 			"terracurl_request": resourceCurl(),
 		},
@@ -35,22 +37,22 @@ func Provider() *schema.Provider {
 	return provider
 }
 
-func New(version string) func() *schema.Provider {
-	return func() *schema.Provider {
-		p := &schema.Provider{
-			DataSourcesMap: map[string]*schema.Resource{
-				"scaffolding_data_source": dataSourceScaffolding(),
-			},
-			ResourcesMap: map[string]*schema.Resource{
-				"terracurl_request": resourceCurl(),
-			},
-		}
-
-		p.ConfigureContextFunc = configure(version, p)
-
-		return p
-	}
-}
+//func New(version string) func() *schema.Provider {
+//	return func() *schema.Provider {
+//		p := &schema.Provider{
+//			DataSourcesMap: map[string]*schema.Resource{
+//				"terracurl_request": dataSourceCurlRequest(),
+//			},
+//			ResourcesMap: map[string]*schema.Resource{
+//				"terracurl_request": resourceCurl(),
+//			},
+//		}
+//
+//		p.ConfigureContextFunc = configure(version, p)
+//
+//		return p
+//	}
+//}
 
 type apiClient struct {
 }
