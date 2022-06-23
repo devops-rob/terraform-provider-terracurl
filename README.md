@@ -1,20 +1,53 @@
-# Terraform Provider Scaffolding (Terraform Plugin SDK)
+# Terraform Provider TerraCurl
 
-_This template repository is built on the [Terraform Plugin SDK](https://github.com/hashicorp/terraform-plugin-sdk). The template repository built on the [Terraform Plugin Framework](https://github.com/hashicorp/terraform-plugin-framework) can be found at [terraform-provider-scaffolding-framework](https://github.com/hashicorp/terraform-provider-scaffolding-framework). See [Which SDK Should I Use?](https://www.terraform.io/docs/plugin/which-sdk.html) in the Terraform documentation for additional information._
+Available in the [Terraform Registry.]()
 
-This repository is a *template* for a [Terraform](https://www.terraform.io) provider. It is intended as a starting point for creating Terraform providers, containing:
+This provider is designed to be a flexible extension of your terraform code to make managed and unamanged API calls to your target endpoint. Platform native providers should be preferred to TerraCurl but for instances where the platform provider does not have a resource or data source that you require, TerraCurl can be used to make substitute API calls.
 
- - A resource, and a data source (`internal/provider/`),
- - Examples (`examples/`) and generated documentation (`docs/`),
- - Miscellaneous meta files.
- 
-These files contain boilerplate code that you will need to edit to create your own Terraform provider. Tutorials for creating Terraform providers can be found on the [HashiCorp Learn](https://learn.hashicorp.com/collections/terraform/providers) platform.
+## Managed API calls
+When using TerraCurl, if the API call is creating a change on the target platform and you would like this change reversed upon a destroy, use the `terracurl_request` resource. This will allow you to enter the API call that should be run when `terraform destroy` is run.
 
-Please see the [GitHub template repository documentation](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/creating-a-repository-from-a-template) for how to create a new repository from this template on GitHub.
+```hcl
+resource "terracurl_request" "mount" {
+  name           = "vault-mount"
+  url            = "http://localhost:8200/v1/sys/mounts/aws"
+  method         = "POST"
+  request_body   = <<EOF
+{
+  "type": "aws",
+  "config": {
+    "force_no_cache": true
+  }
+}
 
-Once you've written your provider, you'll want to [publish it on the Terraform Registry](https://www.terraform.io/docs/registry/providers/publishing.html) so that others can use it.
+EOF
 
+  headers = {
+    X-Vault-Token = "root"
+  }
 
+  response_codes = [200,204]
+
+  destroy_url    = "http://localhost:8200/v1/sys/mounts/aws"
+  destroy_method = "DELETE"
+
+  destroy_headers = {
+    X-Vault-Token = "root"
+  }
+
+  destroy_response_codes = [204]
+}
+```
+## Unmanaged API calls
+For instances where there is no change required on the target platform when the `terraform destroy` command is run, use the `terracurl_request` data source
+
+```hcl
+data "terracurl_request" "test" {
+  name           = "products"
+  url            = "https://api.releases.hashicorp.com/v1/products"
+  method         = "GET"
+}
+```
 ## Requirements
 
 -	[Terraform](https://www.terraform.io/downloads.html) >= 0.13.x
