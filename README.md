@@ -1,6 +1,6 @@
 # Terraform Provider TerraCurl
 
-Available in the [Terraform Registry.]()
+Available in the [Terraform Registry.](https://registry.terraform.io/providers/devops-rob/terracurl/latest/docs)
 
 This provider is designed to be a flexible extension of your terraform code to make managed and unamanged API calls to your target endpoint. Platform native providers should be preferred to TerraCurl but for instances where the platform provider does not have a resource or data source that you require, TerraCurl can be used to make substitute API calls.
 
