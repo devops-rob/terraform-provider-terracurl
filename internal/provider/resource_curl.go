@@ -70,12 +70,13 @@ func resourceCurl() *schema.Resource {
 			"destroy_url": {
 				Description: "Api endpoint to call",
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 			},
 			"destroy_method": {
-				Description: "HTTP method to use in the API call",
-				Type:        schema.TypeString,
-				Required:    true,
+				Description:  "HTTP method to use in the API call",
+				Type:         schema.TypeString,
+				RequiredWith: []string{"destroy_url"},
+				Optional:     true,
 			},
 			"destroy_request_body": {
 				Description: "A request body to attach to the API call",
@@ -91,9 +92,10 @@ func resourceCurl() *schema.Resource {
 				},
 			},
 			"destroy_response_codes": {
-				Type:        schema.TypeList,
-				Required:    true,
-				Description: "A list of expected response codes for destroy operations",
+				Type:         schema.TypeList,
+				Optional:     true,
+				RequiredWith: []string{"destroy_url"},
+				Description:  "A list of expected response codes for destroy operations",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -222,11 +224,30 @@ func resourceCurlDelete(ctx context.Context, d *schema.ResourceData, meta interf
 
 	req := defaultRequestData()
 
-	req.Url = d.Get("destroy_url").(string)
-	req.Method = d.Get("destroy_method").(string)
+	if reqMethod, ok := d.Get("destroy_method").(string); ok {
+		req.Method = reqMethod
+	} else {
+		reqMethod = "DELETE"
+		req.Method = reqMethod
+	}
+
+	method := d.Get("destroy_method").(string)
+	if len(method) == 0 {
+		req.Method = "DELETE"
+	}
+
 	if reqBody, ok := d.Get("destroy_request_body").(string); ok {
 		var jsonStr = []byte(reqBody)
 		req.RequestBody = jsonStr
+	}
+
+	if reqUrl, ok := d.Get("destroy_url").(string); ok {
+		req.Url = reqUrl
+	}
+
+	url := d.Get("destroy_url").(string)
+	if len(url) == 0 {
+		req.Url = "http://example.com"
 	}
 
 	request, err := http.NewRequestWithContext(context.TODO(), req.Method, req.Url, bytes.NewBuffer(req.RequestBody))
@@ -258,16 +279,28 @@ func resourceCurlDelete(ctx context.Context, d *schema.ResourceData, meta interf
 		return diag.FromErr(readErr)
 	}
 
-	respCodes := d.Get("destroy_response_codes").([]interface{})
-	code := fmt.Sprintf("%v", resp.StatusCode)
+	destroyRespCodes := d.Get("destroy_response_codes").([]interface{})
+	if len(destroyRespCodes) == 0 {
+		destroyRespCodes = make([]interface{}, 1)
+		destroyRespCodes[0] = "405"
 
-	stringConversionList := make([]string, len(respCodes))
-	for i, v := range respCodes {
-		stringConversionList[i] = fmt.Sprint(v)
+		//if !responseCodeChecker(defaultList, "405") {
+		//	return diag.Errorf(fmt.Sprintf("%s response received: %s", code, body))
+		//}
+
 	}
 
-	if !responseCodeChecker(stringConversionList, code) {
-		return diag.Errorf(fmt.Sprintf("%s response received: %s", code, body))
+	code := fmt.Sprintf("%v", resp.StatusCode)
+
+	if len(destroyRespCodes) > 0 {
+		stringConversionList := make([]string, len(destroyRespCodes))
+		for i, v := range destroyRespCodes {
+			stringConversionList[i] = fmt.Sprint(v)
+		}
+
+		if !responseCodeChecker(stringConversionList, code) {
+			return diag.Errorf(fmt.Sprintf("%s response received: %s", code, body))
+		}
 	}
 
 	return diags
