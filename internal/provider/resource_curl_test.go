@@ -141,3 +141,66 @@ func testAccCheckRequestDestroy(s *terraform.State) error {
 	}
 	return nil
 }
+
+func testAccresourceNoDestroy(body string) string {
+	return fmt.Sprintf(`
+resource "terracurl_request" "example" {
+  name           = "leader"
+  url            = "https://example.com/create"
+  destroy_url    = "http://example.com"
+
+  request_body = <<EOF
+%s
+EOF
+  method         = "POST"
+  response_codes = ["200","204"]
+}
+
+
+`, body)
+}
+
+func TestAccresourceNoDestroy(t *testing.T) {
+	json := `{"name": "leader"}`
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+	httpmock.RegisterResponder(
+		"POST",
+		"https://example.com/create",
+		httpmock.NewStringResponder(200, json),
+	)
+	httpmock.RegisterResponder(
+		"DELETE",
+		"http://example.com",
+		httpmock.NewStringResponder(405, ""),
+	)
+
+	resource.UnitTest(t, resource.TestCase{
+		CheckDestroy:      testAccCheckRequestDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccresourceNoDestroy(json),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(
+						"terracurl_request.example", "response",
+						json),
+					resource.TestCheckResourceAttr(
+						"terracurl_request.example", "url",
+						"https://example.com/create"),
+					resource.TestCheckResourceAttr(
+						"terracurl_request.example", "name",
+						"leader"),
+					resource.TestCheckResourceAttr(
+						"terracurl_request.example", "response",
+						json),
+					resource.TestCheckResourceAttr(
+						"terracurl_request.example", "method",
+						"POST"),
+				),
+			},
+		},
+	})
+}
