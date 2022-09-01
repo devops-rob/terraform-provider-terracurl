@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -102,14 +102,16 @@ func dataSourceCurlRequestRead(ctx context.Context, d *schema.ResourceData, meta
 	}
 
 	defer resp.Body.Close()
-	body, readErr := ioutil.ReadAll(resp.Body)
+	body, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
 		return diag.FromErr(readErr)
 	}
 
 	respBody.responseBody = string(body)
 
-	d.Set("response", string(body))
+	if err := d.Set("response", string(body)); err != nil {
+		return diag.FromErr(err)
+	}
 
 	return diags
 }

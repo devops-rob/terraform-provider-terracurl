@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"net/http"
+
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"io/ioutil"
-	"net/http"
 )
 
 func resourceCurl() *schema.Resource {
@@ -175,7 +176,7 @@ func resourceCurlCreate(ctx context.Context, d *schema.ResourceData, meta interf
 	}
 
 	defer resp.Body.Close()
-	body, readErr := ioutil.ReadAll(resp.Body)
+	body, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
 		return diag.FromErr(readErr)
 	}
@@ -194,7 +195,9 @@ func resourceCurlCreate(ctx context.Context, d *schema.ResourceData, meta interf
 
 	respBody.responseBody = string(body)
 
-	d.Set("response", string(body))
+	if err := d.Set("response", string(body)); err != nil {
+		return diag.FromErr(err)
+	}
 
 	tflog.Trace(ctx, "created a resource")
 
@@ -274,7 +277,7 @@ func resourceCurlDelete(ctx context.Context, d *schema.ResourceData, meta interf
 	}
 
 	defer resp.Body.Close()
-	body, readErr := ioutil.ReadAll(resp.Body)
+	body, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
 		return diag.FromErr(readErr)
 	}
