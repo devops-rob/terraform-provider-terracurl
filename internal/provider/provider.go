@@ -15,19 +15,6 @@ import (
 
 const TerraformProviderProductUserAgent = "terraform-provider-terracurl"
 
-// HTTPClient interface
-////type HTTPClient interface {
-////	Do(req *http.Request) (*http.Response, error)
-////}
-////
-////var (
-////	Client *http.Client
-////)
-////
-////func init() {
-////	Client = &http.Client{}
-//}
-
 type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
@@ -125,23 +112,6 @@ func Provider() *schema.Provider {
 
 	return provider
 }
-
-//func New(version string) func() *schema.Provider {
-//	return func() *schema.Provider {
-//		p := &schema.Provider{
-//			DataSourcesMap: map[string]*schema.Resource{
-//				"terracurl_request": dataSourceCurlRequest(),
-//			},
-//			ResourcesMap: map[string]*schema.Resource{
-//				"terracurl_request": resourceCurl(),
-//			},
-//		}
-//
-//		p.ConfigureContextFunc = configure(version, p)
-//
-//		return p
-//	}
-//}
 
 type apiClient struct {
 }
