@@ -54,6 +54,40 @@ func resourceCurl() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"cert_file": {
+				Type:         schema.TypeString, // check this
+				Optional:     true,
+				Description:  "Path to a file on local disk that contains the PEM-encoded certificate to present to the server",
+				ForceNew:     true,
+				RequiredWith: []string{"key_file"},
+			},
+			"key_file": {
+				Type:         schema.TypeString, // check this
+				Optional:     true,
+				Description:  "Path to a file on local disk that contains the PEM-encoded private key for which the authentication certificate was issued",
+				ForceNew:     true,
+				RequiredWith: []string{"cert_file"},
+			},
+			"ca_cert_file": {
+				Type:          schema.TypeString, // check this
+				Optional:      true,
+				Description:   "Path to a file on local disk that will be used to validate the certificate presented by the server",
+				ForceNew:      true,
+				ConflictsWith: []string{"ca_cert_directory"},
+			},
+			"ca_cert_directory": {
+				Type:          schema.TypeString, // check this
+				Optional:      true,
+				Description:   "Path to a directory on local disk that contains one or more certificate files that will be used to validate the certificate presented by the server",
+				ForceNew:      true,
+				ConflictsWith: []string{"ca_cert_file"},
+			},
+			"skip_tls_verify": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Set this to true to disable verification of the Vault server's TLS certificate",
+				ForceNew:    true,
+			},
 			"response": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -136,11 +170,31 @@ func responseCodeChecker(s []string, str string) bool {
 
 var respBody ResponseData
 
+type TlsConfig struct {
+	CertFile        string
+	KeyFile         string
+	CaCertFile      string
+	CaCertDirectory string
+	SkipTlsVerify   bool
+}
+
+func defaultTlsConfig() TlsConfig {
+	return TlsConfig{
+		CertFile:        "",
+		KeyFile:         "",
+		CaCertFile:      "",
+		CaCertDirectory: "",
+		SkipTlsVerify:   true,
+	}
+}
+
 func resourceCurlCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	var diags diag.Diagnostics
 	id := d.Get("name").(string)
 	d.SetId(id)
+
+	tlsConfig := defaultTlsConfig()
 
 	req := defaultRequestData()
 
@@ -149,6 +203,35 @@ func resourceCurlCreate(ctx context.Context, d *schema.ResourceData, meta interf
 	if reqBody, ok := d.Get("request_body").(string); ok {
 		var jsonStr = []byte(reqBody)
 		req.RequestBody = jsonStr
+	}
+
+	if certFile, ok := d.Get("cert_file").(string); ok {
+		tlsConfig.CertFile = certFile
+	}
+
+	if keyFile, ok := d.Get("key_file").(string); ok {
+		tlsConfig.KeyFile = keyFile
+	}
+
+	if caCertFile, ok := d.Get("ca_cert_file").(string); ok {
+		tlsConfig.CaCertFile = caCertFile
+	}
+
+	if caCertDirectory, ok := d.Get("ca_cert_directory").(string); ok {
+		tlsConfig.CaCertDirectory = caCertDirectory
+	}
+
+	if skipTlsVerify, ok := d.Get("skip_tls_verify").(bool); ok {
+		tlsConfig.SkipTlsVerify = skipTlsVerify
+	}
+
+	if err := setClient(
+		tlsConfig.CertFile,
+		tlsConfig.KeyFile,
+		tlsConfig.CaCertFile,
+		tlsConfig.CaCertDirectory,
+		tlsConfig.SkipTlsVerify); err != nil {
+		return diag.FromErr(err)
 	}
 
 	request, err := http.NewRequestWithContext(context.TODO(), req.Method, req.Url, bytes.NewBuffer(req.RequestBody))
@@ -224,6 +307,8 @@ func resourceCurlDelete(ctx context.Context, d *schema.ResourceData, meta interf
 
 	req := defaultRequestData()
 
+	tlsConfig := defaultTlsConfig()
+
 	if reqMethod, ok := d.Get("destroy_method").(string); ok {
 		req.Method = reqMethod
 	} else {
@@ -239,6 +324,35 @@ func resourceCurlDelete(ctx context.Context, d *schema.ResourceData, meta interf
 	if reqBody, ok := d.Get("destroy_request_body").(string); ok {
 		var jsonStr = []byte(reqBody)
 		req.RequestBody = jsonStr
+	}
+
+	if certFile, ok := d.Get("cert_file").(string); ok {
+		tlsConfig.CertFile = certFile
+	}
+
+	if keyFile, ok := d.Get("key_file").(string); ok {
+		tlsConfig.KeyFile = keyFile
+	}
+
+	if caCertFile, ok := d.Get("ca_cert_file").(string); ok {
+		tlsConfig.CaCertFile = caCertFile
+	}
+
+	if caCertDirectory, ok := d.Get("ca_cert_directory").(string); ok {
+		tlsConfig.CaCertDirectory = caCertDirectory
+	}
+
+	if skipTlsVerify, ok := d.Get("skip_tls_verify").(bool); ok {
+		tlsConfig.SkipTlsVerify = skipTlsVerify
+	}
+
+	if err := setClient(
+		tlsConfig.CertFile,
+		tlsConfig.KeyFile,
+		tlsConfig.CaCertFile,
+		tlsConfig.CaCertDirectory,
+		tlsConfig.SkipTlsVerify); err != nil {
+		return diag.FromErr(err)
 	}
 
 	if reqUrl, ok := d.Get("destroy_url").(string); ok {

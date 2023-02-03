@@ -204,3 +204,63 @@ func TestAccresourceNoDestroy(t *testing.T) {
 		},
 	})
 }
+
+//func TestAccresourceTls(t *testing.T) {
+//	rName := sdkacctest.RandomWithPrefix("devopsrob")
+//	json := `{"name": "` + rName + `"}`
+//
+//	httpmock.ActivateTLSTransport()
+//	defer httpmock.DeactivateAndReset()
+//	httpmock.RegisterResponder("GET", "https://example.com/api",
+//		httpmock.NewStringResponder(200, `{"message": "Hello, world!"}`))
+//
+//	resource.UnitTest(t, resource.TestCase{
+//		CheckDestroy:      testAccCheckRequestDestroy,
+//		PreCheck:          func() { testAccPreCheck(t) },
+//		ProviderFactories: providerFactories,
+//		Steps: []resource.TestStep{
+//			{
+//				Config: testAccresourceTls(json),
+//				Check: func(s *terraform.State) error {
+//					// Send a request to the mock responder
+//					req, _ := http.NewRequest("GET", "https://example.com/api", nil)
+//					res, err := http.DefaultClient.Do(req)
+//					if err != nil {
+//						return err
+//					}
+//					defer res.Body.Close()
+//
+//					// Check the response from the mock responder
+//					if res.StatusCode != 200 {
+//						return fmt.Errorf("unexpected status code: %d", res.StatusCode)
+//					}
+//
+//					return nil
+//				},
+//			},
+//		},
+//	})
+//}
+//
+//func testAccresourceTls(body string) string {
+//	return fmt.Sprintf(`
+//resource "terracurl_request" "example" {
+//  name           = "leader"
+//  url            = "https://example.com/create"
+//  request_body = <<EOF
+//%s
+//EOF
+//  method         = "POST"
+//  response_codes = ["200"]
+//  destroy_url    = "https://example.com/destroy"
+//  destroy_method = "POST"
+//  destroy_response_codes = ["204"]
+//  # cert_file = "/tls/server-terracurl-0.pem"
+//  # key_file  = "/tls/server-terracurl-0-key.pem"
+//  # ca_cert_file = "/tls/terracurl-ca.pem"
+//  # skip_tls_verify = true
+//
+//}
+//
+//`, body)
+//}
