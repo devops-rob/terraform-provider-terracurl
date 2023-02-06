@@ -7,8 +7,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/sethvargo/go-retry"
 	"io/ioutil"
 	"net/http"
+	"strconv"
+	"time"
 )
 
 func resourceCurl() *schema.Resource {
@@ -88,6 +91,18 @@ func resourceCurl() *schema.Resource {
 				Description: "Set this to true to disable verification of the Vault server's TLS certificate",
 				ForceNew:    true,
 			},
+			"retry_interval": {
+				Type:        schema.TypeInt,
+				Description: "Interval between each attempt",
+				ForceNew:    false,
+				Optional:    true,
+				Default:     10,
+			},
+			"max_retry": {
+				Type:        schema.TypeInt,
+				Description: "Maximum number of tries until it is marked as failed",
+				ForceNew:    false,
+				Optional:    true},
 			"response": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -133,6 +148,19 @@ func resourceCurl() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+			},
+			"destroy_retry_interval": {
+				Type:        schema.TypeInt,
+				Description: "Interval between each attempt",
+				ForceNew:    true,
+				Optional:    true,
+				Default:     10,
+			},
+			"destroy_max_retry": {
+				Type:        schema.TypeInt,
+				Description: "Maximum number of tries until it is marked as failed",
+				ForceNew:    true,
+				Optional:    true,
 			},
 		},
 	}
@@ -251,28 +279,59 @@ func resourceCurlCreate(ctx context.Context, d *schema.ResourceData, meta interf
 			request.Header.Set(k, v)
 		}
 	}
+	ok := false
 
-	resp, err := Client.Do(request)
-	if err != nil {
-		return diag.FromErr(err)
+	retryInterval := 10
+	if retryInterval, ok = d.Get("retry_interval").(int); !ok {
+		tflog.Warn(ctx, "using default value of 1s for retryInterval")
 	}
 
-	defer resp.Body.Close()
-	body, readErr := ioutil.ReadAll(resp.Body)
-	if readErr != nil {
-		return diag.FromErr(readErr)
+	maxRetry := 0
+	if maxRetry, ok = d.Get("max_retry").(int); !ok {
+		tflog.Warn(ctx, "using default value of 1 for maxRetry")
 	}
 
 	respCodes := d.Get("response_codes").([]interface{})
-	code := fmt.Sprintf("%v", resp.StatusCode)
-
 	stringConversionList := make([]string, len(respCodes))
 	for i, v := range respCodes {
 		stringConversionList[i] = fmt.Sprint(v)
 	}
 
-	if !responseCodeChecker(stringConversionList, code) {
-		return diag.Errorf(fmt.Sprintf("%s response received: %s", code, body))
+	var body []byte
+	retryCount := 0
+	var lastError error
+	err = retry.Constant(ctx, time.Duration(retryInterval)*time.Second, func(ctx context.Context) error {
+		if ctx.Err() != nil {
+			return fmt.Errorf("context canceled, not retrying operation: %s", lastError)
+		}
+
+		if retryCount > maxRetry {
+			return fmt.Errorf("request failed, retries exceeded: %s", lastError)
+		}
+
+		var err error
+		var resp *http.Response
+		resp, err = Client.Do(request)
+		if err != nil {
+			retryCount++
+			lastError = err
+			return retry.RetryableError(err)
+		}
+
+		body, _ = ioutil.ReadAll(resp.Body)
+		code := strconv.Itoa(resp.StatusCode)
+
+		if !responseCodeChecker(stringConversionList, code) {
+			retryCount++
+			lastError = err
+			return retry.RetryableError(fmt.Errorf("%s response received: %s", code, body))
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return diag.Errorf("unable to make request: %s", err)
 	}
 
 	respBody.responseBody = string(body)
@@ -382,40 +441,98 @@ func resourceCurlDelete(ctx context.Context, d *schema.ResourceData, meta interf
 		}
 	}
 
-	resp, err := Client.Do(request)
-	if err != nil {
-		return diag.FromErr(err)
+	//resp, err := Client.Do(request)
+	//if err != nil {
+	//	return diag.FromErr(err)
+	//}
+	//
+	//defer resp.Body.Close()
+	//body, readErr := ioutil.ReadAll(resp.Body)
+	//if readErr != nil {
+	//	return diag.FromErr(readErr)
+	//}
+	//
+	//destroyRespCodes := d.Get("destroy_response_codes").([]interface{})
+	//if len(destroyRespCodes) == 0 {
+	//	destroyRespCodes = make([]interface{}, 1)
+	//	destroyRespCodes[0] = "405"
+	//
+	//	//if !responseCodeChecker(defaultList, "405") {
+	//	//	return diag.Errorf(fmt.Sprintf("%s response received: %s", code, body))
+	//	//}
+	//
+	//}
+	//
+	//code := fmt.Sprintf("%v", resp.StatusCode)
+	//
+	//if len(destroyRespCodes) > 0 {
+	//	stringConversionList := make([]string, len(destroyRespCodes))
+	//	for i, v := range destroyRespCodes {
+	//		stringConversionList[i] = fmt.Sprint(v)
+	//	}
+	//
+	//	if !responseCodeChecker(stringConversionList, code) {
+	//		return diag.Errorf(fmt.Sprintf("%s response received: %s", code, body))
+	//	}
+	//}
+
+	////
+
+	ok := false
+	retryInterval := 10
+	if retryInterval, ok = d.Get("destroy_retry_interval").(int); !ok {
+		tflog.Warn(ctx, "using default value of 1s for retryInterval")
 	}
 
-	defer resp.Body.Close()
-	body, readErr := ioutil.ReadAll(resp.Body)
-	if readErr != nil {
-		return diag.FromErr(readErr)
+	maxRetry := 0
+	if maxRetry, ok = d.Get("destroy_max_retry").(int); !ok {
+		tflog.Warn(ctx, "using default value of 1 for maxRetry")
 	}
 
-	destroyRespCodes := d.Get("destroy_response_codes").([]interface{})
-	if len(destroyRespCodes) == 0 {
-		destroyRespCodes = make([]interface{}, 1)
-		destroyRespCodes[0] = "405"
-
-		//if !responseCodeChecker(defaultList, "405") {
-		//	return diag.Errorf(fmt.Sprintf("%s response received: %s", code, body))
-		//}
-
+	respCodes := d.Get("destroy_response_codes").([]interface{})
+	stringConversionList := make([]string, len(respCodes))
+	for i, v := range respCodes {
+		stringConversionList[i] = fmt.Sprint(v)
 	}
 
-	code := fmt.Sprintf("%v", resp.StatusCode)
-
-	if len(destroyRespCodes) > 0 {
-		stringConversionList := make([]string, len(destroyRespCodes))
-		for i, v := range destroyRespCodes {
-			stringConversionList[i] = fmt.Sprint(v)
+	var body []byte
+	retryCount := 0
+	var lastError error
+	err = retry.Constant(ctx, time.Duration(retryInterval)*time.Second, func(ctx context.Context) error {
+		if ctx.Err() != nil {
+			return fmt.Errorf("context canceled, not retrying operation: %s", lastError)
 		}
+
+		if retryCount > maxRetry {
+			return fmt.Errorf("request failed, retries exceeded: %s", lastError)
+		}
+
+		var err error
+		var resp *http.Response
+		resp, err = Client.Do(request)
+		if err != nil {
+			retryCount++
+			lastError = err
+			return retry.RetryableError(err)
+		}
+
+		body, _ = ioutil.ReadAll(resp.Body)
+		code := strconv.Itoa(resp.StatusCode)
 
 		if !responseCodeChecker(stringConversionList, code) {
-			return diag.Errorf(fmt.Sprintf("%s response received: %s", code, body))
+			retryCount++
+			lastError = err
+			return retry.RetryableError(fmt.Errorf("%s response received: %s", code, body))
 		}
+
+		return nil
+	})
+
+	if err != nil {
+		return diag.Errorf("unable to make request: %s", err)
 	}
+
+	respBody.responseBody = string(body)
 
 	return diags
 }
