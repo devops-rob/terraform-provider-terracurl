@@ -441,42 +441,32 @@ func resourceCurlDelete(ctx context.Context, d *schema.ResourceData, meta interf
 		}
 	}
 
-	//resp, err := Client.Do(request)
-	//if err != nil {
-	//	return diag.FromErr(err)
-	//}
-	//
-	//defer resp.Body.Close()
-	//body, readErr := ioutil.ReadAll(resp.Body)
-	//if readErr != nil {
-	//	return diag.FromErr(readErr)
-	//}
-	//
-	//destroyRespCodes := d.Get("destroy_response_codes").([]interface{})
-	//if len(destroyRespCodes) == 0 {
-	//	destroyRespCodes = make([]interface{}, 1)
-	//	destroyRespCodes[0] = "405"
-	//
-	//	//if !responseCodeChecker(defaultList, "405") {
-	//	//	return diag.Errorf(fmt.Sprintf("%s response received: %s", code, body))
-	//	//}
-	//
-	//}
-	//
-	//code := fmt.Sprintf("%v", resp.StatusCode)
-	//
-	//if len(destroyRespCodes) > 0 {
-	//	stringConversionList := make([]string, len(destroyRespCodes))
-	//	for i, v := range destroyRespCodes {
-	//		stringConversionList[i] = fmt.Sprint(v)
-	//	}
-	//
-	//	if !responseCodeChecker(stringConversionList, code) {
-	//		return diag.Errorf(fmt.Sprintf("%s response received: %s", code, body))
-	//	}
-	//}
+	var stringConversionList []string
 
-	////
+	destroyRespCodes := d.Get("destroy_response_codes").([]interface{})
+
+	if len(destroyRespCodes) == 0 {
+		destroyRespCodes = make([]interface{}, 3)
+		destroyRespCodes[0] = "405"
+		destroyRespCodes[1] = "404"
+		destroyRespCodes[2] = "200"
+		stringConversionList = make([]string, len(destroyRespCodes))
+		for i, v := range destroyRespCodes {
+			stringConversionList[i] = fmt.Sprint(v)
+		}
+	} else if len(destroyRespCodes) > 0 {
+		//destroyRespCodes = make([]interface{}, len(destroyRespCodes))
+		//strs := []interface{}{"200", "405", "404"}
+		//stringConversionList = make([]string, len(strs))
+		//for i, v := range strs {
+		//	stringConversionList[i] = fmt.Sprint(v)
+		//}
+		stringConversionList = make([]string, len(destroyRespCodes))
+		for i, v := range destroyRespCodes {
+			stringConversionList[i] = fmt.Sprint(v)
+		}
+
+	}
 
 	ok := false
 	retryInterval := 10
@@ -487,12 +477,6 @@ func resourceCurlDelete(ctx context.Context, d *schema.ResourceData, meta interf
 	maxRetry := 0
 	if maxRetry, ok = d.Get("destroy_max_retry").(int); !ok {
 		tflog.Warn(ctx, "using default value of 1 for maxRetry")
-	}
-
-	respCodes := d.Get("destroy_response_codes").([]interface{})
-	stringConversionList := make([]string, len(respCodes))
-	for i, v := range respCodes {
-		stringConversionList[i] = fmt.Sprint(v)
 	}
 
 	var body []byte
