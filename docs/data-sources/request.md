@@ -11,11 +11,34 @@ description: |-
 Sample data source in the Terraform provider scaffolding.
 
 ## Example Usage
-```hcl
+
+```terraform
+terraform {
+  required_providers {
+    terracurl = {
+      source  = "local/devops-rob/terracurl"
+      version = "1.0.0"
+    }
+  }
+}
+
+provider "terracurl" {}
+
 data "terracurl_request" "test" {
-  name           = "products"
-  url            = "https://api.releases.hashicorp.com/v1/products"
-  method         = "GET"
+  name   = "products"
+  url    = "https://api.releases.hashicorp.com/v1/products"
+  method = "GET"
+
+  response_codes = [
+    200
+  ]
+
+  max_retry      = 1
+  retry_interval = 10
+}
+
+output "response" {
+  value = jsondecode(data.terracurl_request.test.response)
 }
 ```
 
@@ -26,12 +49,20 @@ data "terracurl_request" "test" {
 
 - `method` (String) HTTP method to use in the API call
 - `name` (String) Friendly name for this API call
+- `response_codes` (List of String) A list of expected response codes
 - `url` (String) Api endpoint to call
 
 ### Optional
 
+- `ca_cert_directory` (String) Path to a directory on local disk that contains one or more certificate files that will be used to validate the certificate presented by the server
+- `ca_cert_file` (String) Path to a file on local disk that will be used to validate the certificate presented by the server
+- `cert_file` (String) Path to a file on local disk that contains the PEM-encoded certificate to present to the server
 - `headers` (Map of String) Map of headers to attach to the API call
+- `key_file` (String) Path to a file on local disk that contains the PEM-encoded private key for which the authentication certificate was issued
+- `max_retry` (Number) Maximum number of tries until it is marked as failed
 - `request_body` (String) A request body to attach to the API call
+- `retry_interval` (Number) Interval between each attempt
+- `skip_tls_verify` (Boolean) Set this to true to disable verification of the Vault server's TLS certificate
 
 ### Read-Only
 

@@ -4,8 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/sethvargo/go-retry"
+	"io/ioutil"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -52,22 +56,77 @@ func dataSourceCurlRequest() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"cert_file": {
+				Type:         schema.TypeString, // check this
+				Optional:     true,
+				Description:  "Path to a file on local disk that contains the PEM-encoded certificate to present to the server",
+				ForceNew:     true,
+				RequiredWith: []string{"key_file"},
+			},
+			"key_file": {
+				Type:         schema.TypeString, // check this
+				Optional:     true,
+				Description:  "Path to a file on local disk that contains the PEM-encoded private key for which the authentication certificate was issued",
+				ForceNew:     true,
+				RequiredWith: []string{"cert_file"},
+			},
+			"ca_cert_file": {
+				Type:          schema.TypeString, // check this
+				Optional:      true,
+				Description:   "Path to a file on local disk that will be used to validate the certificate presented by the server",
+				ForceNew:      true,
+				ConflictsWith: []string{"ca_cert_directory"},
+			},
+			"ca_cert_directory": {
+				Type:          schema.TypeString, // check this
+				Optional:      true,
+				Description:   "Path to a directory on local disk that contains one or more certificate files that will be used to validate the certificate presented by the server",
+				ForceNew:      true,
+				ConflictsWith: []string{"ca_cert_file"},
+			},
+			"skip_tls_verify": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Set this to true to disable verification of the Vault server's TLS certificate",
+				ForceNew:    true,
+			},
+			"retry_interval": {
+				Type:        schema.TypeInt,
+				Description: "Interval between each attempt",
+				ForceNew:    false,
+				Optional:    true,
+				Default:     10,
+			},
+			"max_retry": {
+				Type:        schema.TypeInt,
+				Description: "Maximum number of tries until it is marked as failed",
+				ForceNew:    false,
+				Optional:    true,
+				Default:     0,
+			},
 			"response": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "JSON response received from request",
+			},
+			"response_codes": {
+				Type:        schema.TypeList,
+				Required:    true,
+				Description: "A list of expected response codes",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
 			},
 		},
 	}
 }
 
 func dataSourceCurlRequestRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	// use the meta value to retrieve your client from the provider configure method
-	// client := meta.(*apiClient)
-
 	var diags diag.Diagnostics
 	id := d.Get("name").(string)
 	d.SetId(id)
+
+	tlsConfig := defaultTlsConfig()
 
 	req := defaultRequestData()
 
@@ -76,6 +135,35 @@ func dataSourceCurlRequestRead(ctx context.Context, d *schema.ResourceData, meta
 	if reqBody, ok := d.Get("request_body").(string); ok {
 		var jsonStr = []byte(reqBody)
 		req.RequestBody = jsonStr
+	}
+
+	if certFile, ok := d.Get("cert_file").(string); ok {
+		tlsConfig.CertFile = certFile
+	}
+
+	if keyFile, ok := d.Get("key_file").(string); ok {
+		tlsConfig.KeyFile = keyFile
+	}
+
+	if caCertFile, ok := d.Get("ca_cert_file").(string); ok {
+		tlsConfig.CaCertFile = caCertFile
+	}
+
+	if caCertDirectory, ok := d.Get("ca_cert_directory").(string); ok {
+		tlsConfig.CaCertDirectory = caCertDirectory
+	}
+
+	if skipTlsVerify, ok := d.Get("skip_tls_verify").(bool); ok {
+		tlsConfig.SkipTlsVerify = skipTlsVerify
+	}
+
+	if err := setClient(
+		tlsConfig.CertFile,
+		tlsConfig.KeyFile,
+		tlsConfig.CaCertFile,
+		tlsConfig.CaCertDirectory,
+		tlsConfig.SkipTlsVerify); err != nil {
+		return diag.FromErr(err)
 	}
 
 	request, err := http.NewRequestWithContext(context.TODO(), req.Method, req.Url, bytes.NewBuffer(req.RequestBody))
@@ -96,22 +184,63 @@ func dataSourceCurlRequestRead(ctx context.Context, d *schema.ResourceData, meta
 		}
 	}
 
-	resp, err := Client.Do(request)
-	if err != nil {
-		return diag.FromErr(err)
+	ok := false
+
+	retryInterval := 10
+	if retryInterval, ok = d.Get("retry_interval").(int); !ok {
+		tflog.Warn(ctx, "using default value of 1s for retryInterval")
 	}
 
-	defer resp.Body.Close()
-	body, readErr := io.ReadAll(resp.Body)
-	if readErr != nil {
-		return diag.FromErr(readErr)
+	maxRetry := 0
+	if maxRetry, ok = d.Get("max_retry").(int); !ok {
+		tflog.Warn(ctx, "using default value of 0 for maxRetry")
+	}
+
+	respCodes := d.Get("response_codes").([]interface{})
+	stringConversionList := make([]string, len(respCodes))
+	for i, v := range respCodes {
+		stringConversionList[i] = fmt.Sprint(v)
+	}
+
+	var body []byte
+	retryCount := 0
+	var lastError error
+	err = retry.Constant(ctx, time.Duration(retryInterval)*time.Second, func(ctx context.Context) error {
+		if ctx.Err() != nil {
+			return fmt.Errorf("context canceled, not retrying operation: %s", lastError)
+		}
+
+		if retryCount > maxRetry {
+			return fmt.Errorf("request failed, retries exceeded: %s", lastError)
+		}
+
+		var err error
+		var resp *http.Response
+		resp, err = Client.Do(request)
+		if err != nil {
+			retryCount++
+			lastError = err
+			return retry.RetryableError(err)
+		}
+
+		body, _ = ioutil.ReadAll(resp.Body)
+		code := strconv.Itoa(resp.StatusCode)
+
+		if !responseCodeChecker(stringConversionList, code) {
+			retryCount++
+			lastError = fmt.Errorf("%s response received: %s", code, body)
+			return retry.RetryableError(lastError)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return diag.Errorf("unable to make request: %s", err)
 	}
 
 	respBody.responseBody = string(body)
 
-	if err := d.Set("response", string(body)); err != nil {
-		return diag.FromErr(err)
-	}
-
+	d.Set("response", string(body))
 	return diags
 }
