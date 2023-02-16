@@ -40,4 +40,4 @@ shasum:
 	cd bin/; shasum -a 256 *.zip > terraform-provider-$(name)_$(version)_SHA256SUMS
 gpg:
 	gpg --detach-sign ./bin/terraform-provider-$(name)_$(version)_SHA256SUMS
-release_package: docs.old multi_build zip shasum gpg
+release_package: docs multi_build zip shasum gpg

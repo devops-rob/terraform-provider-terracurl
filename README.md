@@ -10,7 +10,7 @@ When using TerraCurl, if the API call is creating a change on the target platfor
 ```hcl
 resource "terracurl_request" "mount" {
   name           = "vault-mount"
-  url            = "http://localhost:8200/v1/sys/mounts/aws"
+  url            = "https://localhost:8200/v1/sys/mounts/aws"
   method         = "POST"
   request_body   = <<EOF
 {
@@ -26,16 +26,33 @@ EOF
     X-Vault-Token = "root"
   }
 
-  response_codes = [200,204]
+  response_codes = [
+    200,
+    204
+  ]
 
-  destroy_url    = "http://localhost:8200/v1/sys/mounts/aws"
+  cert_file       = "server-vault-0.pem"
+  key_file        = "server-vault-0-key.pem"
+  ca_cert_file    = "vault-server-ca.pem"
+  skip_tls_verify = false
+
+
+  destroy_url    = "https://localhost:8200/v1/sys/mounts/aws"
   destroy_method = "DELETE"
 
   destroy_headers = {
     X-Vault-Token = "root"
   }
 
-  destroy_response_codes = [204]
+  destroy_response_codes = [
+    204
+  ]
+
+  destroy_cert_file       = "server-vault-0.pem"
+  destroy_key_file        = "server-vault-0-key.pem"
+  destroy_ca_cert_file    = "vault-server-ca.pem"
+  destroy_skip_tls_verify = false
+
 }
 ```
 ## Unmanaged API calls
@@ -46,6 +63,13 @@ data "terracurl_request" "test" {
   name           = "products"
   url            = "https://api.releases.hashicorp.com/v1/products"
   method         = "GET"
+
+  response_codes = [
+    200
+  ]
+
+  max_retry      = 1
+  retry_interval = 10
 }
 ```
 ## Requirements
@@ -76,22 +100,18 @@ go mod tidy
 
 Then commit the changes to `go.mod` and `go.sum`.
 
-## Using the provider
-
-Fill this in for each provider
-
 ## Developing the Provider
 
 If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (see [Requirements](#requirements) above).
 
-To compile the provider, run `go install`. This will build the provider and put the provider binary in the `$GOPATH/bin` directory.
+To compile the provider, update the makefile with your OS architecture, then run `make install`. This will build the provider and put the provider binary in the `~/.terraform.d/plugins/local/` directory.
 
-To generate or update documentation, run `go generate`.
+To generate or update documentation, run `make docs`.
 
-In order to run the full suite of Acceptance tests, run `make testacc`.
+In order to run the full suite of Acceptance tests, run `make test`.
 
 *Note:* Acceptance tests create real resources, and often cost money to run.
 
 ```sh
-$ make testacc
+$ make test
 ```
