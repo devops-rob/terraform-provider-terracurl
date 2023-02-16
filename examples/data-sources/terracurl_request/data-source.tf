@@ -10,9 +10,9 @@ terraform {
 provider "terracurl" {}
 
 data "terracurl_request" "test" {
-  name           = "products"
-  url            = "https://api.releases.hashicorp.com/v1/products"
-  method         = "GET"
+  name   = "products"
+  url    = "https://api.releases.hashicorp.com/v1/products"
+  method = "GET"
 
   response_codes = [
     200

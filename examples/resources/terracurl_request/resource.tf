@@ -10,10 +10,10 @@ terraform {
 provider "terracurl" {}
 
 resource "terracurl_request" "mount" {
-  name           = "vault-mount"
-  url            = "https://localhost:8200/v1/sys/mounts/aws"
-  method         = "POST"
-  request_body   = <<EOF
+  name         = "vault-mount"
+  url          = "https://localhost:8200/v1/sys/mounts/aws"
+  method       = "POST"
+  request_body = <<EOF
 {
   "type": "aws",
   "config": {
