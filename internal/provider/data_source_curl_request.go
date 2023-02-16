@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"strconv"
 	"time"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -196,6 +195,7 @@ func dataSourceCurlRequestRead(ctx context.Context, d *schema.ResourceData, meta
 		tflog.Warn(ctx, "using default value of 0 for maxRetry")
 	}
 
+
 	respCodes := d.Get("response_codes").([]interface{})
 	stringConversionList := make([]string, len(respCodes))
 	for i, v := range respCodes {
@@ -237,10 +237,12 @@ func dataSourceCurlRequestRead(ctx context.Context, d *schema.ResourceData, meta
 
 	if err != nil {
 		return diag.Errorf("unable to make request: %s", err)
+
 	}
 
 	respBody.responseBody = string(body)
 
 	d.Set("response", string(body))
+
 	return diags
 }

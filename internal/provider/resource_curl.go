@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"net/http"
+
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -371,7 +374,9 @@ func resourceCurlCreate(ctx context.Context, d *schema.ResourceData, meta interf
 
 	respBody.responseBody = string(body)
 
-	d.Set("response", string(body))
+	if err := d.Set("response", string(body)); err != nil {
+		return diag.FromErr(err)
+	}
 
 	tflog.Trace(ctx, "created a resource")
 
@@ -477,6 +482,7 @@ func resourceCurlDelete(ctx context.Context, d *schema.ResourceData, meta interf
 	}
 
 	var stringConversionList []string
+
 
 	destroyRespCodes := d.Get("destroy_response_codes").([]interface{})
 
