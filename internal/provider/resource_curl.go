@@ -102,7 +102,8 @@ func resourceCurl() *schema.Resource {
 				Type:        schema.TypeInt,
 				Description: "Maximum number of tries until it is marked as failed",
 				ForceNew:    false,
-				Optional:    true},
+				Optional:    true,
+			},
 			"response": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -139,6 +140,40 @@ func resourceCurl() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+			},
+			"destroy_cert_file": {
+				Type:         schema.TypeString, // check this
+				Optional:     true,
+				Description:  "Path to a file on local disk that contains the PEM-encoded certificate to present to the server",
+				ForceNew:     true,
+				RequiredWith: []string{"key_file"},
+			},
+			"destroy_key_file": {
+				Type:         schema.TypeString, // check this
+				Optional:     true,
+				Description:  "Path to a file on local disk that contains the PEM-encoded private key for which the authentication certificate was issued",
+				ForceNew:     true,
+				RequiredWith: []string{"cert_file"},
+			},
+			"destroy_ca_cert_file": {
+				Type:          schema.TypeString, // check this
+				Optional:      true,
+				Description:   "Path to a file on local disk that will be used to validate the certificate presented by the server",
+				ForceNew:      true,
+				ConflictsWith: []string{"ca_cert_directory"},
+			},
+			"destroy_ca_cert_directory": {
+				Type:          schema.TypeString, // check this
+				Optional:      true,
+				Description:   "Path to a directory on local disk that contains one or more certificate files that will be used to validate the certificate presented by the server",
+				ForceNew:      true,
+				ConflictsWith: []string{"ca_cert_file"},
+			},
+			"destroy_skip_tls_verify": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Set this to true to disable verification of the Vault server's TLS certificate",
+				ForceNew:    true,
 			},
 			"destroy_response_codes": {
 				Type:         schema.TypeList,
@@ -288,7 +323,7 @@ func resourceCurlCreate(ctx context.Context, d *schema.ResourceData, meta interf
 
 	maxRetry := 0
 	if maxRetry, ok = d.Get("max_retry").(int); !ok {
-		tflog.Warn(ctx, "using default value of 1 for maxRetry")
+		tflog.Warn(ctx, "using default value of 0 for maxRetry")
 	}
 
 	respCodes := d.Get("response_codes").([]interface{})
@@ -385,24 +420,24 @@ func resourceCurlDelete(ctx context.Context, d *schema.ResourceData, meta interf
 		req.RequestBody = jsonStr
 	}
 
-	if certFile, ok := d.Get("cert_file").(string); ok {
-		tlsConfig.CertFile = certFile
+	if destroyCertFile, ok := d.Get("destroy_cert_file").(string); ok {
+		tlsConfig.CertFile = destroyCertFile
 	}
 
-	if keyFile, ok := d.Get("key_file").(string); ok {
-		tlsConfig.KeyFile = keyFile
+	if destroyKeyFile, ok := d.Get("destroy_key_file").(string); ok {
+		tlsConfig.KeyFile = destroyKeyFile
 	}
 
-	if caCertFile, ok := d.Get("ca_cert_file").(string); ok {
-		tlsConfig.CaCertFile = caCertFile
+	if destroyCaCertFile, ok := d.Get("destroy_ca_cert_file").(string); ok {
+		tlsConfig.CaCertFile = destroyCaCertFile
 	}
 
-	if caCertDirectory, ok := d.Get("ca_cert_directory").(string); ok {
-		tlsConfig.CaCertDirectory = caCertDirectory
+	if destroyCaCertDirectory, ok := d.Get("destroy_ca_cert_directory").(string); ok {
+		tlsConfig.CaCertDirectory = destroyCaCertDirectory
 	}
 
-	if skipTlsVerify, ok := d.Get("skip_tls_verify").(bool); ok {
-		tlsConfig.SkipTlsVerify = skipTlsVerify
+	if destroySkipTlsVerify, ok := d.Get("destroy_skip_tls_verify").(bool); ok {
+		tlsConfig.SkipTlsVerify = destroySkipTlsVerify
 	}
 
 	if err := setClient(

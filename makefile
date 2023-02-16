@@ -4,6 +4,8 @@ version = 1.0.0
 arch = darwin_amd64
 #arch = linux_amd64
 
+docs:
+	go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs generate --examples-dir=./examples
 build:
 	go build -o bin/terraform-provider-$(name)_v$(version)
 
@@ -38,4 +40,4 @@ shasum:
 	cd bin/; shasum -a 256 *.zip > terraform-provider-$(name)_$(version)_SHA256SUMS
 gpg:
 	gpg --detach-sign ./bin/terraform-provider-$(name)_$(version)_SHA256SUMS
-release_package: multi_build zip shasum gpg
+release_package: docs.old multi_build zip shasum gpg
