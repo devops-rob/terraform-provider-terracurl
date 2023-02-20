@@ -1,8 +1,8 @@
 terraform {
   required_providers {
     terracurl = {
-      source  = "local/devops-rob/terracurl"
-      version = "1.0.0"
+      source  = "devops-rob/terracurl"
+      version = "1.0.1"
     }
   }
 }

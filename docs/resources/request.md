@@ -16,8 +16,8 @@ A flexible Terraform provider for making API calls
 terraform {
   required_providers {
     terracurl = {
-      source  = "local/devops-rob/terracurl"
-      version = "1.0.0"
+      source  = "devops-rob/terracurl"
+      version = "1.0.1"
     }
   }
 }
@@ -114,5 +114,6 @@ output "response" {
 
 - `id` (String) The ID of this resource.
 - `response` (String) JSON response received from request
+- `status_code` (String) Response status code received from request
 
 

@@ -118,6 +118,11 @@ func dataSourceCurlRequest() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"status_code": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Response status code received from request",
+			},
 		},
 	}
 }
@@ -186,6 +191,7 @@ func dataSourceCurlRequestRead(ctx context.Context, d *schema.ResourceData, meta
 	}
 
 	var body []byte
+	var code string
 	retryCount := 0
 	var lastError error
 	retryErr := retry.Constant(ctx, time.Duration(retryInterval)*time.Second, func(ctx context.Context) error {
@@ -229,7 +235,7 @@ func dataSourceCurlRequestRead(ctx context.Context, d *schema.ResourceData, meta
 		}
 
 		body, _ = ioutil.ReadAll(resp.Body)
-		code := strconv.Itoa(resp.StatusCode)
+		code = strconv.Itoa(resp.StatusCode)
 
 		if !responseCodeChecker(stringConversionList, code) {
 			tflog.Trace(ctx, "call failed, retrying",
@@ -253,5 +259,6 @@ func dataSourceCurlRequestRead(ctx context.Context, d *schema.ResourceData, meta
 	respBody.responseBody = string(body)
 
 	d.Set("response", string(body))
+	d.Set("status_code", code)
 	return diags
 }
