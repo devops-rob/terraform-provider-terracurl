@@ -1,6 +1,6 @@
 name = terracurl
 organization = devops-rob
-version = 1.0.0
+version = 1.0.1
 arch = darwin_amd64
 #arch = linux_amd64
 

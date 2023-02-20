@@ -3,14 +3,16 @@ package provider
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"testing"
+	"time"
+
 	sdkacctest "github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/mock"
-	"io/ioutil"
-	"net/http"
-	"testing"
 )
 
 func TestAccresourceCurl(t *testing.T) {
@@ -85,19 +87,80 @@ func TestAccresourceRetriesOnFailure(t *testing.T) {
 
 	mc := &mockClient{}
 
+	// First failed response
 	resp1 := &http.Response{}
 	resp1.StatusCode = http.StatusInternalServerError
 	resp1.Body = ioutil.NopCloser(bytes.NewReader([]byte("boom")))
 
+	// Second successful response
 	resp2 := &http.Response{}
 	resp2.StatusCode = http.StatusOK
 	resp2.Body = ioutil.NopCloser(bytes.NewReader([]byte(json)))
 
+	// Destroy response
 	resp3 := &http.Response{}
 	resp3.StatusCode = http.StatusNoContent
 	resp3.Body = ioutil.NopCloser(bytes.NewReader([]byte(json)))
 
-	mc.On("Do", mock.Anything).Once().Return(resp1, nil)
+	c := mc.On("Do", mock.Anything).Once().Return(resp1, nil)
+	mc.On("Do", mock.Anything).Once().Return(resp2, nil)
+	mc.On("Do", mock.Anything).Once().Return(resp3, nil)
+
+	var firstCall time.Time
+	c.RunFn = func(args mock.Arguments) {
+		firstCall = time.Now()
+	}
+
+	Client = mc
+
+	// ensure default client is replaced after test
+	defer func() {
+		Client = &http.Client{}
+	}()
+
+	resource.UnitTest(t, resource.TestCase{
+		CheckDestroy:      testAccCheckRequestDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccresourceCurlBodyWithRetry(json),
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						if len(mc.Calls) != 2 {
+							return fmt.Errorf("expected http request to be made 2 times")
+						}
+
+						// ensure the test has run for longer than the retry interval
+						duration := time.Since(firstCall)
+						if duration < 1*time.Second {
+							return fmt.Errorf("expected test to have taken longer than the retry interval of 1s, test duration: %s", duration)
+						}
+
+						return nil
+					}),
+			},
+		},
+	})
+}
+
+func TestAccresourceRetriesOnError(t *testing.T) {
+	rName := sdkacctest.RandomWithPrefix("devopsrob")
+	json := `{"name": "` + rName + `"}`
+
+	mc := &mockClient{}
+
+	// Second successful response
+	resp2 := &http.Response{}
+	resp2.StatusCode = http.StatusOK
+	resp2.Body = ioutil.NopCloser(bytes.NewReader([]byte(json)))
+
+	// Destroy response
+	resp3 := &http.Response{}
+	resp3.StatusCode = http.StatusNoContent
+	resp3.Body = ioutil.NopCloser(bytes.NewReader([]byte(json)))
+
+	mc.On("Do", mock.Anything).Once().Return(nil, fmt.Errorf("boom"))
 	mc.On("Do", mock.Anything).Once().Return(resp2, nil)
 	mc.On("Do", mock.Anything).Once().Return(resp3, nil)
 
@@ -125,7 +188,6 @@ func TestAccresourceRetriesOnFailure(t *testing.T) {
 			},
 		},
 	})
-
 }
 
 func TestAccresourceCurlBody(t *testing.T) {
@@ -224,7 +286,6 @@ func testAccCheckRequestDestroy(s *terraform.State) error {
 		if rs.Type != "terracurl_request" {
 			continue
 		}
-
 	}
 	return nil
 }
