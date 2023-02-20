@@ -118,6 +118,11 @@ func resourceCurl() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"status_code": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Response status code received from request",
+			},
 			"destroy_url": {
 				Description: "Api endpoint to call",
 				Type:        schema.TypeString,
@@ -316,6 +321,7 @@ func resourceCurlCreate(ctx context.Context, d *schema.ResourceData, meta interf
 	}
 
 	var body []byte
+	var code string
 	retryCount := 0
 	var lastError error
 	retryErr := retry.Constant(ctx, time.Duration(retryInterval)*time.Second, func(ctx context.Context) error {
@@ -358,7 +364,7 @@ func resourceCurlCreate(ctx context.Context, d *schema.ResourceData, meta interf
 		}
 
 		body, _ = ioutil.ReadAll(resp.Body)
-		code := strconv.Itoa(resp.StatusCode)
+		code = strconv.Itoa(resp.StatusCode)
 
 		if !responseCodeChecker(stringConversionList, code) {
 			tflog.Trace(ctx, "call failed, retrying",
@@ -384,6 +390,7 @@ func resourceCurlCreate(ctx context.Context, d *schema.ResourceData, meta interf
 	respBody.responseBody = string(body)
 
 	d.Set("response", string(body))
+	d.Set("status_code", code)
 
 	tflog.Trace(ctx, "created a resource")
 
