@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/sethvargo/go-retry"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/sethvargo/go-retry"
 )
 
 func resourceCurl() *schema.Resource {
@@ -252,7 +253,6 @@ func defaultTlsConfig() TlsConfig {
 }
 
 func resourceCurlCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-
 	var diags diag.Diagnostics
 	id := d.Get("name").(string)
 	d.SetId(id)
@@ -264,7 +264,7 @@ func resourceCurlCreate(ctx context.Context, d *schema.ResourceData, meta interf
 	req.Url = d.Get("url").(string)
 	req.Method = d.Get("method").(string)
 	if reqBody, ok := d.Get("request_body").(string); ok {
-		var jsonStr = []byte(reqBody)
+		jsonStr := []byte(reqBody)
 		req.RequestBody = jsonStr
 	}
 
@@ -297,23 +297,6 @@ func resourceCurlCreate(ctx context.Context, d *schema.ResourceData, meta interf
 		return diag.FromErr(err)
 	}
 
-	request, err := http.NewRequestWithContext(context.TODO(), req.Method, req.Url, bytes.NewBuffer(req.RequestBody))
-	if err != nil {
-		diag.FromErr(err)
-	}
-
-	if requestHeaders, ok := d.Get("headers").(map[string]interface{}); ok {
-		headersMap := make(map[string]string)
-		for k, v := range requestHeaders {
-			strKey := fmt.Sprintf("%v", k)
-			strValue := fmt.Sprintf("%v", v)
-			headersMap[strKey] = strValue
-		}
-
-		for k, v := range headersMap {
-			request.Header.Set(k, v)
-		}
-	}
 	ok := false
 
 	retryInterval := 10
@@ -335,7 +318,25 @@ func resourceCurlCreate(ctx context.Context, d *schema.ResourceData, meta interf
 	var body []byte
 	retryCount := 0
 	var lastError error
-	err = retry.Constant(ctx, time.Duration(retryInterval)*time.Second, func(ctx context.Context) error {
+	retryErr := retry.Constant(ctx, time.Duration(retryInterval)*time.Second, func(ctx context.Context) error {
+		request, err := http.NewRequestWithContext(context.TODO(), req.Method, req.Url, bytes.NewBuffer(req.RequestBody))
+		if err != nil {
+			diag.FromErr(err)
+		}
+
+		if requestHeaders, ok := d.Get("headers").(map[string]interface{}); ok {
+			headersMap := make(map[string]string)
+			for k, v := range requestHeaders {
+				strKey := fmt.Sprintf("%v", k)
+				strValue := fmt.Sprintf("%v", v)
+				headersMap[strKey] = strValue
+			}
+
+			for k, v := range headersMap {
+				request.Header.Set(k, v)
+			}
+		}
+
 		if ctx.Err() != nil {
 			return fmt.Errorf("context canceled, not retrying operation: %s", lastError)
 		}
@@ -344,10 +345,13 @@ func resourceCurlCreate(ctx context.Context, d *schema.ResourceData, meta interf
 			return fmt.Errorf("request failed, retries exceeded: %s", lastError)
 		}
 
-		var err error
 		var resp *http.Response
+
+		tflog.Trace(ctx, "calling endpoint", map[string]interface{}{"url": request.URL.String()})
 		resp, err = Client.Do(request)
 		if err != nil {
+			tflog.Trace(ctx, "call failed, retrying", map[string]interface{}{"error": err})
+
 			retryCount++
 			lastError = err
 			return retry.RetryableError(err)
@@ -357,16 +361,24 @@ func resourceCurlCreate(ctx context.Context, d *schema.ResourceData, meta interf
 		code := strconv.Itoa(resp.StatusCode)
 
 		if !responseCodeChecker(stringConversionList, code) {
+			tflog.Trace(ctx, "call failed, retrying",
+				map[string]interface{}{
+					"statuscode": resp.StatusCode,
+					"body":       string(body),
+				})
+
 			retryCount++
-			lastError = err
-			return retry.RetryableError(fmt.Errorf("%s response received: %s", code, body))
+			lastError = fmt.Errorf("%s response received: %s", code, body)
+			return retry.RetryableError(lastError)
 		}
+
+		tflog.Trace(ctx, "call succeded", map[string]interface{}{"statuscode": resp.StatusCode})
 
 		return nil
 	})
 
-	if err != nil {
-		return diag.Errorf("unable to make request: %s", err)
+	if retryErr != nil {
+		return diag.Errorf("unable to make request: %s", retryErr)
 	}
 
 	respBody.responseBody = string(body)
@@ -387,14 +399,11 @@ func resourceCurlRead(ctx context.Context, d *schema.ResourceData, meta interfac
 }
 
 func resourceCurlUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-
 	var diags diag.Diagnostics
 	return diags
-
 }
 
 func resourceCurlDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-
 	var diags diag.Diagnostics
 	id := d.Get("name").(string)
 	d.SetId(id)
@@ -416,7 +425,7 @@ func resourceCurlDelete(ctx context.Context, d *schema.ResourceData, meta interf
 	}
 
 	if reqBody, ok := d.Get("destroy_request_body").(string); ok {
-		var jsonStr = []byte(reqBody)
+		jsonStr := []byte(reqBody)
 		req.RequestBody = jsonStr
 	}
 
@@ -456,24 +465,6 @@ func resourceCurlDelete(ctx context.Context, d *schema.ResourceData, meta interf
 	url := d.Get("destroy_url").(string)
 	if len(url) == 0 {
 		req.Url = "http://example.com"
-	}
-
-	request, err := http.NewRequestWithContext(context.TODO(), req.Method, req.Url, bytes.NewBuffer(req.RequestBody))
-	if err != nil {
-		diag.FromErr(err)
-	}
-
-	if requestHeaders, ok := d.Get("destroy_headers").(map[string]interface{}); ok {
-		headersMap := make(map[string]string)
-		for k, v := range requestHeaders {
-			strKey := fmt.Sprintf("%v", k)
-			strValue := fmt.Sprintf("%v", v)
-			headersMap[strKey] = strValue
-		}
-
-		for k, v := range headersMap {
-			request.Header.Set(k, v)
-		}
 	}
 
 	var stringConversionList []string
@@ -517,7 +508,7 @@ func resourceCurlDelete(ctx context.Context, d *schema.ResourceData, meta interf
 	var body []byte
 	retryCount := 0
 	var lastError error
-	err = retry.Constant(ctx, time.Duration(retryInterval)*time.Second, func(ctx context.Context) error {
+	retryErr := retry.Constant(ctx, time.Duration(retryInterval)*time.Second, func(ctx context.Context) error {
 		if ctx.Err() != nil {
 			return fmt.Errorf("context canceled, not retrying operation: %s", lastError)
 		}
@@ -526,10 +517,32 @@ func resourceCurlDelete(ctx context.Context, d *schema.ResourceData, meta interf
 			return fmt.Errorf("request failed, retries exceeded: %s", lastError)
 		}
 
-		var err error
+		request, err := http.NewRequestWithContext(context.TODO(), req.Method, req.Url, bytes.NewBuffer(req.RequestBody))
+		if err != nil {
+			diag.FromErr(err)
+		}
+
+		if requestHeaders, ok := d.Get("destroy_headers").(map[string]interface{}); ok {
+			headersMap := make(map[string]string)
+			for k, v := range requestHeaders {
+				strKey := fmt.Sprintf("%v", k)
+				strValue := fmt.Sprintf("%v", v)
+				headersMap[strKey] = strValue
+			}
+
+			for k, v := range headersMap {
+				request.Header.Set(k, v)
+			}
+		}
+
 		var resp *http.Response
 		resp, err = Client.Do(request)
 		if err != nil {
+			tflog.Trace(ctx, "call failed, retrying",
+				map[string]interface{}{
+					"err": err,
+				})
+
 			retryCount++
 			lastError = err
 			return retry.RetryableError(err)
@@ -539,6 +552,12 @@ func resourceCurlDelete(ctx context.Context, d *schema.ResourceData, meta interf
 		code := strconv.Itoa(resp.StatusCode)
 
 		if !responseCodeChecker(stringConversionList, code) {
+			tflog.Trace(ctx, "call failed, retrying",
+				map[string]interface{}{
+					"statuscode": resp.StatusCode,
+					"body":       string(body),
+				})
+
 			retryCount++
 			lastError = err
 			return retry.RetryableError(fmt.Errorf("%s response received: %s", code, body))
@@ -547,8 +566,8 @@ func resourceCurlDelete(ctx context.Context, d *schema.ResourceData, meta interf
 		return nil
 	})
 
-	if err != nil {
-		return diag.Errorf("unable to make request: %s", err)
+	if retryErr != nil {
+		return diag.Errorf("unable to make request: %s", retryErr)
 	}
 
 	respBody.responseBody = string(body)
