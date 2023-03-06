@@ -70,7 +70,7 @@ func resourceCurl() *schema.Resource {
 			"request_url_string": {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "Response status code received from request",
+				Description: "Request URL includes parameters if request specified",
 			},
 			"cert_file": {
 				Type:         schema.TypeString, // check this
