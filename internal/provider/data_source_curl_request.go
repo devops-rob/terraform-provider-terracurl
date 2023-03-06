@@ -105,6 +105,13 @@ func dataSourceCurlRequest() *schema.Resource {
 				Optional:    true,
 				Default:     0,
 			},
+			"timeout": {
+				Type:        schema.TypeInt,
+				Description: "Time in seconds before each request times out. Defaults to 10",
+				ForceNew:    false,
+				Optional:    true,
+				Default:     10,
+			},
 			"response": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -190,11 +197,24 @@ func dataSourceCurlRequestRead(ctx context.Context, d *schema.ResourceData, meta
 		stringConversionList[i] = fmt.Sprint(v)
 	}
 
+	var duration time.Duration
+
+	if timeout, ok := d.Get("timeout").(int); ok {
+		duration = time.Duration(timeout) * time.Second
+	} else {
+		duration = 10 * time.Second // default timeout duration
+		tflog.Warn(ctx, "using default value of 10 for timeout")
+	}
+
 	var body []byte
 	var code string
 	retryCount := 0
 	var lastError error
 	retryErr := retry.Constant(ctx, time.Duration(retryInterval)*time.Second, func(ctx context.Context) error {
+
+		ctx, cancel := context.WithTimeout(ctx, duration)
+		defer cancel()
+
 		if ctx.Err() != nil {
 			return fmt.Errorf("context canceled, not retrying operation: %s", lastError)
 		}
@@ -203,7 +223,7 @@ func dataSourceCurlRequestRead(ctx context.Context, d *schema.ResourceData, meta
 			return fmt.Errorf("request failed, retries exceeded: %s", lastError)
 		}
 
-		request, err := http.NewRequestWithContext(context.TODO(), req.Method, req.Url, bytes.NewBuffer(req.RequestBody))
+		request, err := http.NewRequestWithContext(ctx, req.Method, req.Url, bytes.NewBuffer(req.RequestBody))
 		if err != nil {
 			diag.FromErr(err)
 		}

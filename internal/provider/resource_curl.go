@@ -105,6 +105,13 @@ func resourceCurl() *schema.Resource {
 				ForceNew:    false,
 				Optional:    true,
 			},
+			"timeout": {
+				Type:        schema.TypeInt,
+				Description: "Time in seconds before each request times out. Defaults to 10",
+				ForceNew:    false,
+				Optional:    true,
+				Default:     10,
+			},
 			"response": {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -202,6 +209,13 @@ func resourceCurl() *schema.Resource {
 				Description: "Maximum number of tries until it is marked as failed",
 				ForceNew:    true,
 				Optional:    true,
+			},
+			"destroy_timeout": {
+				Type:        schema.TypeInt,
+				Description: "Time in seconds before each request times out. Defaults to 10",
+				ForceNew:    false,
+				Optional:    true,
+				Default:     10,
 			},
 		},
 	}
@@ -320,12 +334,25 @@ func resourceCurlCreate(ctx context.Context, d *schema.ResourceData, meta interf
 		stringConversionList[i] = fmt.Sprint(v)
 	}
 
+	var duration time.Duration
+
+	if timeout, ok := d.Get("timeout").(int); ok {
+		duration = time.Duration(timeout) * time.Second
+	} else {
+		duration = 10 * time.Second // default timeout duration
+		tflog.Warn(ctx, "using default value of 10 for timeout")
+	}
+
 	var body []byte
 	var code string
 	retryCount := 0
 	var lastError error
 	retryErr := retry.Constant(ctx, time.Duration(retryInterval)*time.Second, func(ctx context.Context) error {
-		request, err := http.NewRequestWithContext(context.TODO(), req.Method, req.Url, bytes.NewBuffer(req.RequestBody))
+
+		ctx, cancel := context.WithTimeout(ctx, duration)
+		defer cancel()
+
+		request, err := http.NewRequestWithContext(ctx, req.Method, req.Url, bytes.NewBuffer(req.RequestBody))
 		if err != nil {
 			diag.FromErr(err)
 		}
@@ -488,12 +515,6 @@ func resourceCurlDelete(ctx context.Context, d *schema.ResourceData, meta interf
 			stringConversionList[i] = fmt.Sprint(v)
 		}
 	} else if len(destroyRespCodes) > 0 {
-		//destroyRespCodes = make([]interface{}, len(destroyRespCodes))
-		//strs := []interface{}{"200", "405", "404"}
-		//stringConversionList = make([]string, len(strs))
-		//for i, v := range strs {
-		//	stringConversionList[i] = fmt.Sprint(v)
-		//}
 		stringConversionList = make([]string, len(destroyRespCodes))
 		for i, v := range destroyRespCodes {
 			stringConversionList[i] = fmt.Sprint(v)
@@ -512,10 +533,22 @@ func resourceCurlDelete(ctx context.Context, d *schema.ResourceData, meta interf
 		tflog.Warn(ctx, "using default value of 1 for maxRetry")
 	}
 
+	var duration time.Duration
+
+	if timeout, ok := d.Get("destroy_timeout").(int); ok {
+		duration = time.Duration(timeout) * time.Second
+	} else {
+		duration = 10 * time.Second // default timeout duration
+		tflog.Warn(ctx, "using default value of 10 for timeout")
+	}
+
 	var body []byte
 	retryCount := 0
 	var lastError error
 	retryErr := retry.Constant(ctx, time.Duration(retryInterval)*time.Second, func(ctx context.Context) error {
+		ctx, cancel := context.WithTimeout(ctx, duration)
+		defer cancel()
+
 		if ctx.Err() != nil {
 			return fmt.Errorf("context canceled, not retrying operation: %s", lastError)
 		}
@@ -524,7 +557,7 @@ func resourceCurlDelete(ctx context.Context, d *schema.ResourceData, meta interf
 			return fmt.Errorf("request failed, retries exceeded: %s", lastError)
 		}
 
-		request, err := http.NewRequestWithContext(context.TODO(), req.Method, req.Url, bytes.NewBuffer(req.RequestBody))
+		request, err := http.NewRequestWithContext(ctx, req.Method, req.Url, bytes.NewBuffer(req.RequestBody))
 		if err != nil {
 			diag.FromErr(err)
 		}
