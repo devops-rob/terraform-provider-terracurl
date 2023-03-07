@@ -98,8 +98,8 @@ output "response" {
 - `destroy_key_file` (String) Path to a file on local disk that contains the PEM-encoded private key for which the authentication certificate was issued
 - `destroy_max_retry` (Number) Maximum number of tries until it is marked as failed
 - `destroy_method` (String) HTTP method to use in the API call
+- `destroy_parameters` (Map of String) Map of parameters to attach to the API call
 - `destroy_request_body` (String) A request body to attach to the API call
-- `destroy_parameters` (Map of String) Map of request parameters to attach to the API call
 - `destroy_response_codes` (List of String) A list of expected response codes for destroy operations
 - `destroy_retry_interval` (Number) Interval between each attempt
 - `destroy_skip_tls_verify` (Boolean) Set this to true to disable verification of the Vault server's TLS certificate
@@ -108,15 +108,15 @@ output "response" {
 - `key_file` (String) Path to a file on local disk that contains the PEM-encoded private key for which the authentication certificate was issued
 - `max_retry` (Number) Maximum number of tries until it is marked as failed
 - `request_body` (String) A request body to attach to the API call
-- `request_parameters` (Map of String) Map of request parameters to attach to the API call
+- `request_parameters` (Map of String) Map of parameters to attach to the API call
 - `retry_interval` (Number) Interval between each attempt
 - `skip_tls_verify` (Boolean) Set this to true to disable verification of the Vault server's TLS certificate
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+- `request_url_string` (String) Request URL includes parameters if request specified
 - `response` (String) JSON response received from request
 - `status_code` (String) Response status code received from request
-- `request_url_string` (String) Combined URL & Request Parameters that was sent to the API.
 
 
