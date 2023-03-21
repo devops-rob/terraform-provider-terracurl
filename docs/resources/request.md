@@ -102,6 +102,7 @@ output "response" {
 - `destroy_response_codes` (List of String) A list of expected response codes for destroy operations
 - `destroy_retry_interval` (Number) Interval between each attempt
 - `destroy_skip_tls_verify` (Boolean) Set this to true to disable verification of the Vault server's TLS certificate
+- `destroy_timeout` (Number) Time in seconds before each request times out. Defaults to 10
 - `destroy_url` (String) Api endpoint to call
 - `headers` (Map of String) Map of headers to attach to the API call
 - `key_file` (String) Path to a file on local disk that contains the PEM-encoded private key for which the authentication certificate was issued
@@ -109,6 +110,7 @@ output "response" {
 - `request_body` (String) A request body to attach to the API call
 - `retry_interval` (Number) Interval between each attempt
 - `skip_tls_verify` (Boolean) Set this to true to disable verification of the Vault server's TLS certificate
+- `timeout` (Number) Time in seconds before each request times out. Defaults to 10
 
 ### Read-Only
 
