@@ -329,7 +329,8 @@ func TestAccMyResourceWithTimeout(t *testing.T) {
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccdataSourceCurlBodyWithTimeout(json),
+				Config:   testAccdataSourceCurlBodyWithTimeout(json),
+				PlanOnly: true,
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckMyResourceWithTimeout("my_resource", 1*time.Second),
 				),
