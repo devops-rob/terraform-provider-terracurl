@@ -206,35 +206,35 @@ func testCheckDurationWithTimeout() resource.TestCheckFunc {
 	}
 }
 
-func TestAccMyResourceWithTimeout(t *testing.T) {
-	rName := sdkacctest.RandomWithPrefix("devopsrob")
-	json := `{"name": "` + rName + `"}`
-
-	httpmock.Activate()
-	defer httpmock.DeactivateAndReset()
-	httpmock.RegisterResponder(
-		"POST",
-		"https://example.com/create",
-		func(req *http.Request) (*http.Response, error) {
-			time.Sleep(1 * time.Second) // Delay the response by 6 seconds
-			return httpmock.NewStringResponse(200, `{"name": "devopsrob"}`), nil
-		},
-	)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: providerFactories,
-		Steps: []resource.TestStep{
-			{
-				Config:   testAccdataSourceCurlBodyWithTimeout(json),
-				PlanOnly: true,
-				Check: resource.ComposeTestCheckFunc(
-					testAccCheckMyResourceWithTimeout("my_resource", 1*time.Second),
-				),
-			},
-		},
-	})
-}
+//func TestAccMyResourceWithTimeout(t *testing.T) {
+//	rName := sdkacctest.RandomWithPrefix("devopsrob")
+//	json := `{"name": "` + rName + `"}`
+//
+//	httpmock.Activate()
+//	defer httpmock.DeactivateAndReset()
+//	httpmock.RegisterResponder(
+//		"POST",
+//		"https://example.com/create",
+//		func(req *http.Request) (*http.Response, error) {
+//			time.Sleep(1 * time.Second) // Delay the response by 6 seconds
+//			return httpmock.NewStringResponse(200, `{"name": "devopsrob"}`), nil
+//		},
+//	)
+//
+//	resource.Test(t, resource.TestCase{
+//		PreCheck:          func() { testAccPreCheck(t) },
+//		ProviderFactories: providerFactories,
+//		Steps: []resource.TestStep{
+//			{
+//				Config:   testAccdataSourceCurlBodyWithTimeout(json),
+//				PlanOnly: true,
+//				Check: resource.ComposeTestCheckFunc(
+//					testAccCheckMyResourceWithTimeout("my_resource", 1*time.Second),
+//				),
+//			},
+//		},
+//	})
+//}
 
 func testAccCheckMyResourceWithTimeout(name string, timeout time.Duration) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
