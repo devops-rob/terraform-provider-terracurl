@@ -58,6 +58,20 @@ func resourceCurl() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"request_parameters": {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Description: "Map of parameters to attach to the API call",
+				ForceNew:    true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"request_url_string": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Request URL includes parameters if request specified",
+			},
 			"cert_file": {
 				Type:         schema.TypeString, // check this
 				Optional:     true,
@@ -154,6 +168,14 @@ func resourceCurl() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"destroy_parameters": {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Description: "Map of parameters to attach to the API call",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 			"destroy_cert_file": {
 				Type:         schema.TypeString, // check this
 				Optional:     true,
@@ -222,18 +244,20 @@ func resourceCurl() *schema.Resource {
 }
 
 type RequestData struct {
-	Url         string
-	Method      string
-	RequestBody []byte
-	Headers     map[string]string
+	Url               string
+	Method            string
+	RequestBody       []byte
+	Headers           map[string]string
+	RequestParameters map[string]string
 }
 
 func defaultRequestData() RequestData {
 	return RequestData{
-		Url:         "",
-		Method:      "",
-		RequestBody: nil,
-		Headers:     nil,
+		Url:               "",
+		Method:            "",
+		RequestBody:       nil,
+		Headers:           nil,
+		RequestParameters: nil,
 	}
 }
 
@@ -282,6 +306,7 @@ func resourceCurlCreate(ctx context.Context, d *schema.ResourceData, meta interf
 
 	req.Url = d.Get("url").(string)
 	req.Method = d.Get("method").(string)
+
 	if reqBody, ok := d.Get("request_body").(string); ok {
 		jsonStr := []byte(reqBody)
 		req.RequestBody = jsonStr
@@ -368,7 +393,30 @@ func resourceCurlCreate(ctx context.Context, d *schema.ResourceData, meta interf
 			for k, v := range headersMap {
 				request.Header.Set(k, v)
 			}
+
+			tflog.Trace(ctx, "Request Headers", map[string]interface{}{"Request Headers": request.Header})
 		}
+
+		if requestParameters, ok := d.Get("request_parameters").(map[string]interface{}); ok {
+			parametersMap := make(map[string]string)
+
+			for k, v := range requestParameters {
+				strKey := fmt.Sprintf("%v", k)
+				strValue := fmt.Sprintf("%v", v)
+				parametersMap[strKey] = strValue
+			}
+
+			params := request.URL.Query()
+			for k, v := range parametersMap {
+				params.Add(k, v)
+			}
+
+			request.URL.RawQuery = params.Encode()
+
+			tflog.Trace(ctx, "Request URL", map[string]interface{}{"Request Parameters": request.URL.String()})
+		}
+
+		d.Set("request_url_string", request.URL.String())
 
 		if ctx.Err() != nil {
 			return fmt.Errorf("context canceled, not retrying operation: %s", lastError)
@@ -573,6 +621,25 @@ func resourceCurlDelete(ctx context.Context, d *schema.ResourceData, meta interf
 			for k, v := range headersMap {
 				request.Header.Set(k, v)
 			}
+		}
+
+		if requestParameters, ok := d.Get("destroy_parameters").(map[string]interface{}); ok {
+			parametersMap := make(map[string]string)
+
+			for k, v := range requestParameters {
+				strKey := fmt.Sprintf("%v", k)
+				strValue := fmt.Sprintf("%v", v)
+				parametersMap[strKey] = strValue
+			}
+
+			params := request.URL.Query()
+			for k, v := range parametersMap {
+				params.Add(k, v)
+			}
+
+			request.URL.RawQuery = params.Encode()
+
+			tflog.Trace(ctx, "Request URL", map[string]interface{}{"Request Parameters": request.URL.String()})
 		}
 
 		var resp *http.Response

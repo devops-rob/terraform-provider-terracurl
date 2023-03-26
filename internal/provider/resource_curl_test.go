@@ -308,6 +308,84 @@ EOF
 `, body)
 }
 
+func TestAccresourceCurlParameters(t *testing.T) {
+	rName := sdkacctest.RandomWithPrefix("devopsrob")
+	json := `{"name": "` + rName + `"}`
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+	httpmock.RegisterResponder(
+		"POST",
+		"https://example.com/create",
+		httpmock.NewStringResponder(200, json),
+	)
+
+	httpmock.RegisterResponder(
+		"POST",
+		"https://example.com/destroy",
+		httpmock.NewStringResponder(204, ""))
+	resource.UnitTest(t, resource.TestCase{
+		CheckDestroy:      testAccCheckRequestDestroy,
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccresourceCurlParameters(json),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(
+						"terracurl_request.example", "response",
+						json),
+					resource.TestCheckResourceAttr(
+						"terracurl_request.example", "url",
+						"https://example.com/create"),
+					resource.TestCheckResourceAttr(
+						"terracurl_request.example", "name",
+						"leader"),
+					resource.TestCheckResourceAttr(
+						"terracurl_request.example", "response",
+						json),
+					resource.TestCheckResourceAttr(
+						"terracurl_request.example", "method",
+						"POST"),
+					resource.TestCheckResourceAttr(
+						"terracurl_request.example", "request_url_string",
+						"https://example.com/create?Action=parameter"),
+					resource.TestCheckResourceAttr(
+						"terracurl_request.example", "destroy_url",
+						"https://example.com/destroy"),
+					resource.TestCheckResourceAttr(
+						"terracurl_request.example", "destroy_method",
+						"POST"),
+					resource.TestCheckResourceAttr(
+						"terracurl_request.example", "response_codes.#", "1"),
+				),
+			},
+		},
+	})
+}
+
+func testAccresourceCurlParameters(body string) string {
+	return fmt.Sprintf(`
+resource "terracurl_request" "example" {
+  name           = "leader"
+  url            = "https://example.com/create"
+  request_parameters = {
+	"Action" = "parameter"
+  }
+  request_body = <<EOF
+%s
+EOF
+  method         = "POST"
+  response_codes = ["200"]
+  destroy_url    = "https://example.com/destroy"
+  destroy_method = "POST"
+  destroy_response_codes = ["204"]
+}
+
+
+`, body)
+}
+
 func TestAccresourceNoDestroy(t *testing.T) {
 	json := `{"name": "leader"}`
 
