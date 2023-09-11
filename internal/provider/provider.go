@@ -5,12 +5,13 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
 	"strings"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 const TerraformProviderProductUserAgent = "terraform-provider-terracurl"
@@ -36,9 +37,13 @@ func (tc *TLSClient) Do(req *http.Request) (*http.Response, error) {
 }
 
 func NewTLSClient(certFile, keyFile, caCert, caDir string, insecureSkipVerify bool) (HTTPClient, error) {
-	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-	if err != nil {
-		return nil, err
+	var cert tls.Certificate
+	if certFile != "" {
+		c, err := tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			return nil, err
+		}
+		cert = c
 	}
 
 	var rootCAs *x509.CertPool
@@ -86,10 +91,6 @@ func NewTLSClient(certFile, keyFile, caCert, caDir string, insecureSkipVerify bo
 }
 
 func setClient(certFile, keyFile, caCert, caDir string, insecureSkipVerify bool) error {
-	if certFile == "" {
-		return nil
-	}
-
 	tlsClient, err := NewTLSClient(certFile, keyFile, caCert, caDir, insecureSkipVerify)
 	if err != nil {
 		return err
