@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -16,6 +17,16 @@ import (
 )
 
 func TestAccresourceCurl(t *testing.T) {
+	err := os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+	if err != nil {
+		return
+	}
+	defer func() {
+		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
+		if err != nil {
+
+		}
+	}()
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 	httpmock.RegisterResponder(
@@ -191,6 +202,16 @@ func TestAccresourceRetriesOnError(t *testing.T) {
 }
 
 func TestAccresourceCurlBody(t *testing.T) {
+	err := os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+	if err != nil {
+		return
+	}
+	defer func() {
+		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
+		if err != nil {
+
+		}
+	}()
 	rName := sdkacctest.RandomWithPrefix("devopsrob")
 	json := `{"name": "` + rName + `"}`
 

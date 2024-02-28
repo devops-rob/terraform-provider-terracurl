@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"regexp"
 	"testing"
 
@@ -16,7 +17,8 @@ import (
 )
 
 func TestAccdataSourceCurlRequest(t *testing.T) {
-
+	os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+	defer os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
 	rName := sdkacctest.RandomWithPrefix("devopsrob")
 	json := `{"name": "` + rName + `"}`
 
@@ -66,6 +68,7 @@ EOF
 }
 
 func TestAccdataSourceRetriesOnFailure(t *testing.T) {
+
 	rName := sdkacctest.RandomWithPrefix("devopsrob")
 	json := `{"name": "` + rName + `"}`
 
