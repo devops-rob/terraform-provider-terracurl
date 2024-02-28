@@ -1,16 +1,15 @@
 package provider
 
 import (
-	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -29,14 +28,18 @@ func init() {
 }
 
 type TLSClient struct {
-	client *http.Client
+	client HTTPClient
 }
 
 func (tc *TLSClient) Do(req *http.Request) (*http.Response, error) {
 	return tc.client.Do(req)
 }
 
-func NewTLSClient(certFile, keyFile, caCert, caDir string, insecureSkipVerify bool) (HTTPClient, error) {
+func NewTLSClient(certFile, keyFile, caCert, caDir string, insecureSkipVerify bool, useDefaultClient bool) (HTTPClient, error) {
+	if useDefaultClient {
+		// Directly return a wrapper around http.DefaultClient for testing
+		return &TLSClient{client: http.DefaultClient}, nil
+	}
 	var cert tls.Certificate
 	if certFile != "" {
 		c, err := tls.LoadX509KeyPair(certFile, keyFile)
@@ -91,7 +94,10 @@ func NewTLSClient(certFile, keyFile, caCert, caDir string, insecureSkipVerify bo
 }
 
 func setClient(certFile, keyFile, caCert, caDir string, insecureSkipVerify bool) error {
-	tlsClient, err := NewTLSClient(certFile, keyFile, caCert, caDir, insecureSkipVerify)
+	// Determine whether to use http.DefaultClient based on an environment variable or a test flag.
+	useDefaultClient := os.Getenv("USE_DEFAULT_CLIENT_FOR_TESTS") == "true"
+
+	tlsClient, err := NewTLSClient(certFile, keyFile, caCert, caDir, insecureSkipVerify, useDefaultClient)
 	if err != nil {
 		return err
 	}
@@ -99,7 +105,6 @@ func setClient(certFile, keyFile, caCert, caDir string, insecureSkipVerify bool)
 	Client = tlsClient
 	return nil
 }
-
 func Provider() *schema.Provider {
 	provider := &schema.Provider{
 
@@ -114,12 +119,12 @@ func Provider() *schema.Provider {
 	return provider
 }
 
-type apiClient struct {
-}
-
-func configure(version string, p *schema.Provider) func(context.Context, *schema.ResourceData) (interface{}, diag.Diagnostics) {
-	return func(context.Context, *schema.ResourceData) (interface{}, diag.Diagnostics) {
-
-		return &apiClient{}, nil
-	}
-}
+//type apiClient struct {
+//}
+//
+//func configure(version string, p *schema.Provider) func(context.Context, *schema.ResourceData) (interface{}, diag.Diagnostics) {
+//	return func(context.Context, *schema.ResourceData) (interface{}, diag.Diagnostics) {
+//
+//		return &apiClient{}, nil
+//	}
+//}
