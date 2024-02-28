@@ -1,7 +1,6 @@
 package provider
 
 import (
-	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
@@ -11,7 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -95,16 +93,6 @@ func NewTLSClient(certFile, keyFile, caCert, caDir string, insecureSkipVerify bo
 	return &TLSClient{&http.Client{Transport: tr}}, nil
 }
 
-//func setClient(certFile, keyFile, caCert, caDir string, insecureSkipVerify bool) error {
-//	tlsClient, err := NewTLSClient(certFile, keyFile, caCert, caDir, insecureSkipVerify)
-//	if err != nil {
-//		return err
-//	}
-//
-//	Client = tlsClient
-//	return nil
-//}
-
 func setClient(certFile, keyFile, caCert, caDir string, insecureSkipVerify bool) error {
 	// Determine whether to use http.DefaultClient based on an environment variable or a test flag.
 	useDefaultClient := os.Getenv("USE_DEFAULT_CLIENT_FOR_TESTS") == "true"
@@ -131,12 +119,12 @@ func Provider() *schema.Provider {
 	return provider
 }
 
-type apiClient struct {
-}
-
-func configure(version string, p *schema.Provider) func(context.Context, *schema.ResourceData) (interface{}, diag.Diagnostics) {
-	return func(context.Context, *schema.ResourceData) (interface{}, diag.Diagnostics) {
-
-		return &apiClient{}, nil
-	}
-}
+//type apiClient struct {
+//}
+//
+//func configure(version string, p *schema.Provider) func(context.Context, *schema.ResourceData) (interface{}, diag.Diagnostics) {
+//	return func(context.Context, *schema.ResourceData) (interface{}, diag.Diagnostics) {
+//
+//		return &apiClient{}, nil
+//	}
+//}
