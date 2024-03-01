@@ -1,7 +1,6 @@
 package provider
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	sdkacctest "github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
