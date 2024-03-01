@@ -70,5 +70,3 @@ output "response" {
 - `id` (String) The ID of this resource.
 - `response` (String) JSON response received from request
 - `status_code` (String) Response status code received from request
-
-
