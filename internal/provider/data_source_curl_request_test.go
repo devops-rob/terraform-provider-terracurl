@@ -218,6 +218,17 @@ EOF
 
 }
 func TestAccdataSourceCurlRequestTimeout(t *testing.T) {
+	err := os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+	if err != nil {
+		return
+	}
+	defer func() {
+		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
+		if err != nil {
+
+		}
+	}()
+
 	rName := sdkacctest.RandomWithPrefix("devopsrob")
 	json := `{"name": "` + rName + `"}`
 
