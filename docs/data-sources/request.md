@@ -63,6 +63,7 @@ output "response" {
 - `request_body` (String) A request body to attach to the API call
 - `retry_interval` (Number) Interval between each attempt
 - `skip_tls_verify` (Boolean) Set this to true to disable verification of the Vault server's TLS certificate
+- `timeout` (Number) Time in seconds before each request times out. Defaults to 10
 
 ### Read-Only
 

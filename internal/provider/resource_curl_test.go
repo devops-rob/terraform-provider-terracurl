@@ -89,68 +89,6 @@ func (m *mockClient) Do(r *http.Request) (*http.Response, error) {
 	return nil, args.Error(1)
 }
 
-//func TestAccresourceRetriesOnFailure(t *testing.T) {
-//	rName := sdkacctest.RandomWithPrefix("devopsrob")
-//	json := `{"name": "` + rName + `"}`
-//
-//	mc := &mockClient{}
-//
-//	// First failed response
-//	resp1 := &http.Response{}
-//	resp1.StatusCode = http.StatusInternalServerError
-//	resp1.Body = ioutil.NopCloser(bytes.NewReader([]byte("boom")))
-//
-//	// Second successful response
-//	resp2 := &http.Response{}
-//	resp2.StatusCode = http.StatusOK
-//	resp2.Body = ioutil.NopCloser(bytes.NewReader([]byte(json)))
-//
-//	// Destroy response
-//	resp3 := &http.Response{}
-//	resp3.StatusCode = http.StatusNoContent
-//	resp3.Body = ioutil.NopCloser(bytes.NewReader([]byte(json)))
-//	c := mc.On("Do", mock.Anything).Once().Return(resp1, nil)
-//	mc.On("Do", mock.Anything).Once().Return(resp2, nil)
-//	mc.On("Do", mock.Anything).Once().Return(resp3, nil)
-//
-//	var firstCall time.Time
-//	c.RunFn = func(args mock.Arguments) {
-//		firstCall = time.Now()
-//	}
-//
-//	Client = mc
-//
-//	// ensure default client is replaced after test
-//	defer func() {
-//		Client = &http.Client{}
-//	}()
-//
-//	resource.UnitTest(t, resource.TestCase{
-//		CheckDestroy:      testAccCheckRequestDestroy,
-//		PreCheck:          func() { testAccPreCheck(t) },
-//		ProviderFactories: providerFactories,
-//		Steps: []resource.TestStep{
-//			{
-//				Config: testAccresourceCurlBodyWithRetry(json),
-//				Check: resource.ComposeTestCheckFunc(
-//					func(s *terraform.State) error {
-//						if len(mc.Calls) != 2 {
-//							return fmt.Errorf("expected http request to be made 2 times")
-//						}
-//
-//						// ensure the test has run for longer than the retry interval
-//						duration := time.Since(firstCall)
-//						if duration < 1*time.Second {
-//							return fmt.Errorf("expected test to have taken longer than the retry interval of 1s, test duration: %s", duration)
-//						}
-//
-//						return nil
-//					}),
-//			},
-//		},
-//	})
-//}
-
 func TestAccresourceRetriesOnFailure(t *testing.T) {
 	err := os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 	if err != nil {
@@ -248,24 +186,6 @@ func TestAccresourceRetriesOnError(t *testing.T) {
 		"POST",
 		"https://example.com/destroy",
 		httpmock.NewStringResponder(204, ""))
-
-	//mc := &mockClient{}
-	//
-	//// Second successful response
-	//resp2 := &http.Response{}
-	//resp2.StatusCode = http.StatusOK
-	//resp2.Body = ioutil.NopCloser(bytes.NewReader([]byte(json)))
-	//
-	//// Destroy response
-	//resp3 := &http.Response{}
-	//resp3.StatusCode = http.StatusNoContent
-	//resp3.Body = ioutil.NopCloser(bytes.NewReader([]byte(json)))
-	//
-	//mc.On("Do", mock.Anything).Once().Return(nil, fmt.Errorf("boom"), nil)
-	//mc.On("Do", mock.Anything).Once().Return(resp2, nil)
-	//mc.On("Do", mock.Anything).Once().Return(resp3, nil)
-	//
-	//Client = mc
 
 	// ensure default client is replaced after test
 	defer func() {

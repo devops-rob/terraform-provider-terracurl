@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"context"
 	"fmt"
 	sdkacctest "github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -8,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -194,4 +196,109 @@ EOF
 }
 `, body)
 
+}
+
+func testAccdataSourceCurlBodyWithTimeout(body string) string {
+	return fmt.Sprintf(`
+data "terracurl_request" "test" {
+ name           = "leader"
+ url            = "https://example.com/create"
+ response_codes = ["200"]
+
+ request_body = <<EOF
+%s
+EOF
+
+ retry_interval = 1
+ max_retry 	 	= 1
+ method         = "POST"
+ timeout = 1
+}
+`, body)
+
+}
+func TestAccdataSourceCurlRequestTimeout(t *testing.T) {
+	err := os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+	if err != nil {
+		return
+	}
+	defer func() {
+		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
+		if err != nil {
+
+		}
+	}()
+
+	rName := sdkacctest.RandomWithPrefix("devopsrob")
+	json := `{"name": "` + rName + `"}`
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+	httpmock.RegisterResponder(
+		"POST",
+		"https://example.com/create",
+		func(req *http.Request) (*http.Response, error) {
+			//time.Sleep(2 * time.Second) // Delay the response by 6 seconds
+			return httpmock.NewStringResponse(200, `{"name": "devopsrob"}`), nil
+		},
+	)
+
+	start := time.Now() // Record the start time
+	resource.UnitTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		Steps: []resource.TestStep{
+			{
+				PlanOnly: true,
+				Config:   testAccdataSourceCurlBodyWithTimeout(json),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckDurationWithTimeout(),
+				),
+			},
+		},
+	})
+	duration := time.Since(start)        // Calculate the duration of the API call
+	t.Logf("API call took %v", duration) // Log the duration
+}
+
+func testCheckDurationWithTimeout() resource.TestCheckFunc {
+	return func(state *terraform.State) error {
+		resource := state.RootModule().Resources["data.terracurl_request.test"]
+		durationStr := resource.Primary.Attributes["duration_milliseconds"]
+		if durationStr == "" {
+			return fmt.Errorf("duration_milliseconds attribute not set")
+		}
+		duration, err := time.ParseDuration(durationStr + "ms")
+		if err != nil {
+			return fmt.Errorf("failed to parse duration: %v", err)
+		}
+		if duration < 1*time.Second || duration > 30*time.Second {
+			return fmt.Errorf("expected duration between 1 and 30 seconds, got %v", duration)
+		}
+		// Check for timeout error message
+		if !strings.Contains(resource.Primary.Attributes["response"], "context canceled, not retrying operation") &&
+			!strings.Contains(resource.Primary.Attributes["response"], "request failed, retries exceeded") {
+			return fmt.Errorf("expected error message not found in response")
+		}
+		return nil
+	}
+}
+
+func testAccCheckMyResourceWithTimeout(name string, timeout time.Duration) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+
+		select {
+		case <-ctx.Done():
+			if ctx.Err() == context.DeadlineExceeded {
+				// Timeout exceeded, test passed
+				return nil
+			}
+			return fmt.Errorf("unexpected context error: %v", ctx.Err())
+		case <-time.After(2 * time.Second):
+			// Timeout not exceeded, test failed
+			return fmt.Errorf("resource %s did not timeout", name)
+		}
+	}
 }
