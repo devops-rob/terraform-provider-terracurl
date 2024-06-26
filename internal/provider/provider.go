@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,9 +20,7 @@ type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-var (
-	Client HTTPClient
-)
+var Client HTTPClient
 
 func init() {
 	Client = &http.Client{}
@@ -83,6 +82,9 @@ func NewTLSClient(certFile, keyFile, caCert, caDir string, insecureSkipVerify bo
 	}
 
 	tr := &http.Transport{
+		Proxy: func(req *http.Request) (*url.URL, error) {
+			return http.ProxyFromEnvironment(req)
+		},
 		TLSClientConfig: &tls.Config{
 			Certificates:       []tls.Certificate{cert},
 			RootCAs:            rootCAs,
@@ -105,9 +107,9 @@ func setClient(certFile, keyFile, caCert, caDir string, insecureSkipVerify bool)
 	Client = tlsClient
 	return nil
 }
+
 func Provider() *schema.Provider {
 	provider := &schema.Provider{
-
 		DataSourcesMap: map[string]*schema.Resource{
 			"terracurl_request": dataSourceCurlRequest(),
 		},
