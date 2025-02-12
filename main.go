@@ -2,9 +2,10 @@ package main
 
 import (
 	"flag"
-
+	"fmt"
 	terracurl "github.com/devops-rob/terraform-provider-terracurl/internal/provider"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
+	"log"
 )
 
 // Run "go generate" to format example terraform files and generate the docs for the registry/website
@@ -40,5 +41,9 @@ func main() {
 		ProviderFunc: terracurl.Provider,
 	}
 
+	log.Println("Starting Terraform provider terracurl...")
+
 	plugin.Serve(opts)
+
+	fmt.Println("Provider started successfully")
 }
