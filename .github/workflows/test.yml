@@ -53,6 +53,21 @@ jobs:
       - uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: '1.9.5'
+
+      - name: Create Terraform configuration file
+        run: |
+          cat <<EOF > main.tf
+          terraform {
+            required_providers {
+              terracurl = {
+                source  = "terraform.example.com/your-org/terracurl"
+                version = "1.0.0"
+              }
+            }
+          }
+          provider "terracurl" {}
+          EOF
+
       - run: terraform init -upgrade
       - run: terraform providers
       - run: |
