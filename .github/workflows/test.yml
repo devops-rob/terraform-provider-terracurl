@@ -52,6 +52,7 @@ jobs:
       - uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: '1.9.5'
+      - run: terraform init -upgrade
       - run: go generate ./...
       - name: git diff
         run: |
