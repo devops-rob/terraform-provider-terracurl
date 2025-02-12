@@ -53,7 +53,9 @@ jobs:
         with:
           terraform_version: '1.9.5'
       - run: terraform init -upgrade
-      - run: go generate ./...
+      - run: |
+          export TF_LOG=DEBUG
+          go generate ./...
       - name: git diff
         run: |
           git diff --compact-summary --exit-code || \
