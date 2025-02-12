@@ -545,8 +545,9 @@ jobs:
 
       - name: Debug Provider Execution
         run: |
-          echo "Verifying provider binary execution..."
-          ./terraform-provider-terracurl -debug || echo "Provider crashed with error"
+          export TF_LOG=TRACE
+          terraform init -upgrade
+          terraform providers || echo "Error: Terraform could not attach to provider"
 
       - name: Verify Terraform Plugin Directories
         run: |
