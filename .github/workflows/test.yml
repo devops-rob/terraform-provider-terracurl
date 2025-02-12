@@ -54,6 +54,8 @@ jobs:
           terraform_version: '1.9.5'
       - run: terraform init -upgrade
       - run: |
+          terraform providers schema -json > schema.json || (cat schema.json; exit 1)
+      - run: |
           export TF_LOG=DEBUG
           go generate ./...
       - name: git diff
