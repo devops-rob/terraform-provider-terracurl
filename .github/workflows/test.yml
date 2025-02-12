@@ -264,6 +264,82 @@ jobs:
           name: terraform-provider-terracurl
           path: terraform-provider-terracurl
 
+#  generate:
+#    needs: build
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v3
+#      - uses: actions/setup-go@v4
+#        with:
+#          go-version-file: 'go.mod'
+#          cache: true
+#      - uses: hashicorp/setup-terraform@v2
+#        with:
+#          terraform_version: '1.9.5'
+#
+#      # ⬇️ Download the built provider binary
+#      - name: Download built provider
+#        uses: actions/download-artifact@v4
+#        with:
+#          name: terraform-provider-terracurl
+#          path: .
+#
+#      - name: Make provider executable
+#        run: chmod +x terraform-provider-terracurl
+#
+#      # ⬇️ Move the provider to Terraform's expected plugin directories
+#      - name: Move Provider to Terraform Plugin Directories
+#        run: |
+#          mkdir -p ~/.terraform.d/plugins/local/local/terracurl/1.0.0/linux_amd64
+#          mkdir -p .terraform/plugins/registry.local/local/terracurl/1.0.0/linux_amd64
+#          cp terraform-provider-terracurl ~/.terraform.d/plugins/local/local/terracurl/1.0.0/linux_amd64/
+#          cp terraform-provider-terracurl .terraform/plugins/registry.local/local/terracurl/1.0.0/linux_amd64/
+#
+#      # ⬇️ Debug: Verify that Terraform can find the provider
+#      - name: List Terraform Provider Plugins
+#        run: |
+#          echo "Checking ~/.terraform.d/plugins/"
+#          ls -la ~/.terraform.d/plugins/local/local/terracurl/1.0.0/linux_amd64/
+#          echo "Checking .terraform/plugins/"
+#          ls -la .terraform/plugins/registry.local/local/terracurl/1.0.0/linux_amd64/
+#
+#      - name: Create Terraform configuration file
+#        run: |
+#          cat <<EOF > main.tf
+#          terraform {
+#            required_providers {
+#              terracurl = {
+#                source  = "local/local/terracurl"
+#                version = "1.0.0"
+#              }
+#            }
+#          }
+#          provider "terracurl" {}
+#          EOF
+#
+#      - name: Initialize Terraform
+#        run: terraform init -upgrade
+#
+#      - name: Verify Installed Providers
+#        run: terraform providers
+#
+#      - name: Generate Provider Schema
+#        run: |
+#          export TF_LOG=DEBUG
+#          terraform providers schema -json > schema.json || (echo "Error generating schema!"; cat schema.json; exit 1)
+#
+#      - name: Debug Schema Output
+#        run: cat schema.json
+#
+#      - name: Run `go generate`
+#        run: |
+#          export TF_LOG=DEBUG
+#          go generate ./...
+#
+#      - name: Check for Unexpected Changes
+#        run: |
+#          git diff --compact-summary --exit-code || \
+#            (echo; echo "Unexpected difference in directories after code generation. Run 'go generate ./...' command and commit."; exit 1)
   generate:
     needs: build
     runs-on: ubuntu-latest
@@ -277,7 +353,6 @@ jobs:
         with:
           terraform_version: '1.9.5'
 
-      # ⬇️ Download the built provider binary
       - name: Download built provider
         uses: actions/download-artifact@v4
         with:
@@ -287,7 +362,6 @@ jobs:
       - name: Make provider executable
         run: chmod +x terraform-provider-terracurl
 
-      # ⬇️ Move the provider to Terraform's expected plugin directories
       - name: Move Provider to Terraform Plugin Directories
         run: |
           mkdir -p ~/.terraform.d/plugins/local/local/terracurl/1.0.0/linux_amd64
@@ -295,7 +369,11 @@ jobs:
           cp terraform-provider-terracurl ~/.terraform.d/plugins/local/local/terracurl/1.0.0/linux_amd64/
           cp terraform-provider-terracurl .terraform/plugins/registry.local/local/terracurl/1.0.0/linux_amd64/
 
-      # ⬇️ Debug: Verify that Terraform can find the provider
+      - name: Debug Provider Binary
+        run: |
+          file terraform-provider-terracurl
+          ./terraform-provider-terracurl || echo "Provider crashed with error"
+
       - name: List Terraform Provider Plugins
         run: |
           echo "Checking ~/.terraform.d/plugins/"
@@ -323,9 +401,11 @@ jobs:
       - name: Verify Installed Providers
         run: terraform providers
 
+      - name: Enable Terraform Debug Logs
+        run: export TF_LOG=TRACE
+
       - name: Generate Provider Schema
         run: |
-          export TF_LOG=DEBUG
           terraform providers schema -json > schema.json || (echo "Error generating schema!"; cat schema.json; exit 1)
 
       - name: Debug Schema Output
