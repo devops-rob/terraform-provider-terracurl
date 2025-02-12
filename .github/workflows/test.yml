@@ -163,7 +163,7 @@ jobs:
         run: go build -o terraform-provider-terracurl .
 
       - name: Upload provider binary
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: terraform-provider-terracurl
           path: terraform-provider-terracurl
