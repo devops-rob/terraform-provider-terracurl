@@ -183,7 +183,7 @@ jobs:
           terraform_version: '1.9.5'
 
       - name: Download built provider
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: terraform-provider-terracurl
           path: .
@@ -266,7 +266,7 @@ jobs:
           terraform_wrapper: false
 
       - name: Download built provider
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: terraform-provider-terracurl
           path: .
