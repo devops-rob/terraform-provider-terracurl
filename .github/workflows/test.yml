@@ -51,7 +51,7 @@ jobs:
           cache: true
       - uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: 'latest'
+          terraform_version: '1.9.5'
       - run: go generate ./...
       - name: git diff
         run: |
