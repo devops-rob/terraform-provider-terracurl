@@ -59,22 +59,10 @@ jobs:
       - name: Move Provider to Terraform Plugin Directories
         run: |
           mkdir -p ~/.terraform.d/plugins/local/local/terracurl/1.0.0/linux_amd64
-          mkdir -p .terraform/plugins/registry.local/local/terracurl/1.0.0/linux_amd64
           cp terraform-provider-terracurl ~/.terraform.d/plugins/local/local/terracurl/1.0.0/linux_amd64/
-          cp terraform-provider-terracurl .terraform/plugins/registry.local/local/terracurl/1.0.0/linux_amd64/
-
-      - name: Debug Provider Execution
-        run: |
-          export TF_LOG=TRACE
-          terraform init -upgrade
-          terraform providers || echo "Error: Terraform could not attach to provider"
 
       - name: Verify Terraform Plugin Directories
-        run: |
-          echo "Checking ~/.terraform.d/plugins/"
-          ls -la ~/.terraform.d/plugins/local/local/terracurl/1.0.0/linux_amd64/
-          echo "Checking .terraform/plugins/"
-          ls -la .terraform/plugins/registry.local/local/terracurl/1.0.0/linux_amd64/
+        run: ls -la ~/.terraform.d/plugins/local/local/terracurl/1.0.0/linux_amd64/
 
       - name: Create Terraform configuration file
         run: |
@@ -90,11 +78,11 @@ jobs:
           provider "terracurl" {}
           EOF
 
-      - name: Initialize Terraform
-        run: terraform init -upgrade
-
-      - name: Verify Installed Providers
-        run: terraform providers
+      - name: Debug Provider with Terraform
+        run: |
+          export TF_LOG=TRACE
+          terraform init -upgrade
+          terraform providers || echo "Error: Terraform could not attach to provider"
 
       - name: Run Provider Schema Export Manually
         run: |
