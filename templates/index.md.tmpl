@@ -4,7 +4,7 @@ description: |-
   TODO
 ---
 
-# TERRACURL Provider
+# {{ .ProviderShortName | upper }} Provider
 
 TOOD
 
@@ -16,10 +16,6 @@ As of Terraform 1.8 and later, providers can implement functions that you can ca
 
 Define the provider as a `required_provider` to use its functions
 
-```terraform
-provider "terracurl" {
-  # No configuration required here
-}
-```
+{{ tffile "examples/provider/provider.tf" }}
 
 ## Limitations
