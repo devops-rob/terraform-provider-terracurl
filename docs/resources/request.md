@@ -102,6 +102,7 @@ output "response" {
 - `destroy_request_body` (String) A request body to attach to the API call
 - `destroy_response_codes` (List of String) A list of expected response codes for destroy operations
 - `destroy_retry_interval` (Number) Interval between each attempt
+- `destroy_skip` (Boolean) Set this to true to skip issuing a request when the resource is being destroyed.
 - `destroy_skip_tls_verify` (Boolean) Set this to true to disable verification of the Vault server's TLS certificate
 - `destroy_timeout` (Number) Time in seconds before each request times out. Defaults to 10
 - `destroy_url` (String) Api endpoint to call

@@ -144,6 +144,11 @@ func resourceCurl() *schema.Resource {
 				Computed:    true,
 				Description: "Response status code received from request",
 			},
+			"destroy_skip": {
+				Description: "Set this to true to skip issuing a request when the resource is being destroyed.",
+				Type:        schema.TypeBool,
+				Optional:    true,
+			},
 			"destroy_url": {
 				Description: "Api endpoint to call",
 				Type:        schema.TypeString,
@@ -487,6 +492,11 @@ func resourceCurlUpdate(ctx context.Context, d *schema.ResourceData, meta interf
 
 func resourceCurlDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
+
+	if skipDestroyRequest, _ := d.Get("destroy_skip").(bool); skipDestroyRequest {
+		return diags
+	}
+
 	id := d.Get("name").(string)
 	d.SetId(id)
 

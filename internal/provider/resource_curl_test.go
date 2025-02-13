@@ -63,7 +63,8 @@ func TestAccresourceCurl(t *testing.T) {
 	})
 }
 
-const testAccresourceCurl = `
+const (
+	testAccresourceCurl = `
 resource "terracurl_request" "example" {
   name           = "leader"
   url            = "https://example.com"
@@ -74,6 +75,15 @@ resource "terracurl_request" "example" {
   destroy_response_codes = ["200"]
 }
 `
+	testAccresourceSkipDestroy = `	
+resource "terracurl_request" "example" {
+  name           = "leader"
+  url            = "https://example.com"
+  destroy_skip   = true
+  method         = "GET"
+  response_codes = ["200","204"]
+}`
+)
 
 type mockClient struct {
 	mock.Mock
@@ -429,7 +439,97 @@ EOF
 `, body)
 }
 
-func TestAccresourceNoDestroy(t *testing.T) {
+func testMockEndpointCount(endpoint string, expected int) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		usage := httpmock.GetCallCountInfo()
+		if usage[endpoint] != expected {
+			return fmt.Errorf("endpoint called %d times, expected %d", usage[endpoint], expected)
+		}
+		return nil
+	}
+}
+
+func TestAccresourceSkipDestroy(t *testing.T) {
+	err := os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+	if err != nil {
+		return
+	}
+	defer func() {
+		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
+		if err != nil {
+
+		}
+	}()
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+	httpmock.RegisterResponder(
+		"GET",
+		"https://example.com",
+		httpmock.NewStringResponder(200, ""),
+	)
+	httpmock.RegisterResponder(
+		"DELETE",
+		"http://example.com",
+		httpmock.NewStringResponder(405, ""),
+	)
+
+	resource.UnitTest(t, resource.TestCase{
+		CheckDestroy:      testMockEndpointCount("DELETE http://example.com", 0),
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccresourceSkipDestroy,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("terracurl_request.example", "response", ""),
+				),
+			},
+		},
+	})
+}
+
+func TestAccresourceDoesNotSkipDestroy(t *testing.T) {
+	err := os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+	if err != nil {
+		return
+	}
+	defer func() {
+		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
+		if err != nil {
+
+		}
+	}()
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+	httpmock.RegisterResponder(
+		"GET",
+		"https://example.com",
+		httpmock.NewStringResponder(200, ""),
+	)
+	httpmock.RegisterResponder(
+		"DELETE",
+		"https://example.com",
+		httpmock.NewStringResponder(405, ""),
+	)
+
+	resource.UnitTest(t, resource.TestCase{
+		CheckDestroy:      testMockEndpointCount("GET https://example.com", 2),
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccresourceCurl,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("terracurl_request.example", "response", ""),
+				),
+			},
+		},
+	})
+}
+
+func TestAccresourceDefaultDestroy(t *testing.T) {
 	err := os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 	if err != nil {
 		return
