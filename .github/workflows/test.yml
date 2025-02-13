@@ -33,6 +33,7 @@ jobs:
         with:
           name: terraform-provider-terracurl
           path: terraform-provider-terracurl
+          compression-level: 0
 
   generate:
     needs: build
