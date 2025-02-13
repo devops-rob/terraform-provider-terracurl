@@ -46,7 +46,7 @@ jobs:
           cache: true
       - uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: '1.9.5'
+          terraform_version: '1.10.5'
 
       - name: Download built provider
         uses: actions/download-artifact@v4
