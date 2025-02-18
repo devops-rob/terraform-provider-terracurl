@@ -1,3 +1,7 @@
-## 0.1.0 (Unreleased)
+## 2..0 (Unreleased)
 
 FEATURES:
+
+- Upgraded SDK to Terraform Provider Framework
+- Drift detection support
+- Ephemeral resource support
