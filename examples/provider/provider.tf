@@ -9,6 +9,11 @@ terraform {
 
 provider "terracurl" {}
 
+
+locals {
+  vault_token = jsondecode(ephemeral.terracurl_request.ephems.response).data
+  token = local.vault_token
+}
 resource "terracurl_request" "test" {
   method         = "POST"
   name           = "test"
@@ -73,4 +78,3 @@ EOF
   }
 
 }
-
