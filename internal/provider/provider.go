@@ -66,7 +66,9 @@ func (p *TerraCurlProvider) Resources(ctx context.Context) []func() resource.Res
 }
 
 func (p *TerraCurlProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{}
+	return []func() datasource.DataSource{
+		NewCurlDataSource,
+	}
 }
 
 func (p *TerraCurlProvider) Functions(ctx context.Context) []func() function.Function {

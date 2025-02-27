@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/ephemeralvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -356,6 +357,26 @@ func (e *EphemeralCurlResource) Open(ctx context.Context, req ephemeral.OpenRequ
 		return
 	}
 
+	if !data.SkipRenew.IsNull() && !data.SkipRenew.ValueBool() {
+		if data.RenewUrl.IsNull() || data.RenewMethod.IsNull() || data.RenewResponseCodes.IsNull() {
+			resp.Diagnostics.AddError(
+				"Invalid Configuration",
+				"If `skip_renew` is set to `false`, `renew_url`, `renew_method`, and `renew_response_codes` must be provided.",
+			)
+			return
+		}
+	}
+
+	if !data.SkipClose.IsNull() && !data.SkipClose.ValueBool() {
+		if data.CloseUrl.IsNull() || data.CloseMethod.IsNull() || data.CloseResponseCodes.IsNull() {
+			resp.Diagnostics.AddError(
+				"Invalid Configuration",
+				"If `skip_close` is set to `false`, `close_url`, `close_method`, and `close_response_codes` must be provided.",
+			)
+			return
+		}
+	}
+
 	data.Id = types.StringValue(data.Name.ValueString())
 
 	// useTLS is used to decide
@@ -509,6 +530,26 @@ func (e *EphemeralCurlResource) Renew(ctx context.Context, req ephemeral.RenewRe
 	}
 
 	var data CurlEphemeralModel
+
+	if !data.SkipRenew.IsNull() && !data.SkipRenew.ValueBool() {
+		if data.RenewUrl.IsNull() || data.RenewMethod.IsNull() || data.RenewResponseCodes.IsNull() {
+			resp.Diagnostics.AddError(
+				"Invalid Configuration",
+				"If `skip_renew` is set to `false`, `renew_url`, `renew_method`, and `renew_response_codes` must be provided.",
+			)
+			return
+		}
+	}
+
+	if !data.SkipClose.IsNull() && !data.SkipClose.ValueBool() {
+		if data.CloseUrl.IsNull() || data.CloseMethod.IsNull() || data.CloseResponseCodes.IsNull() {
+			resp.Diagnostics.AddError(
+				"Invalid Configuration",
+				"If `skip_close` is set to `false`, `close_url`, `close_method`, and `close_response_codes` must be provided.",
+			)
+			return
+		}
+	}
 
 	// Setting this as a sane default
 	if data.SkipRenew.IsUnknown() || data.SkipRenew.IsNull() {
@@ -834,9 +875,39 @@ func (e *EphemeralCurlResource) Close(ctx context.Context, req ephemeral.CloseRe
 
 func (e EphemeralCurlResource) ConfigValidators(ctx context.Context) []ephemeral.ConfigValidator {
 	return []ephemeral.ConfigValidator{
+		ephemeralvalidator.RequiredTogether(
+			path.MatchRoot("cert_file"),
+			path.MatchRoot("key_file"),
+		),
 		ephemeralvalidator.Conflicting(
-		//path.MatchRoot("attribute_one"),
-		//path.MatchRoot("attribute_two"),
+			path.MatchRoot("ca_cert_file"),
+			path.MatchRoot("ca_cert_directory"),
+		),
+		ephemeralvalidator.RequiredTogether(
+			path.MatchRoot("renew_url"),
+			path.MatchRoot("renew_method"),
+			path.MatchRoot("renew_response_codes"),
+		),
+		ephemeralvalidator.RequiredTogether(
+			path.MatchRoot("close_url"),
+			path.MatchRoot("close_method"),
+			path.MatchRoot("close_response_codes"),
+		),
+		ephemeralvalidator.RequiredTogether(
+			path.MatchRoot("renew_cert_file"),
+			path.MatchRoot("renew_key_file"),
+		),
+		ephemeralvalidator.Conflicting(
+			path.MatchRoot("renew_ca_cert_file"),
+			path.MatchRoot("renew_ca_cert_directory"),
+		),
+		ephemeralvalidator.RequiredTogether(
+			path.MatchRoot("close_cert_file"),
+			path.MatchRoot("close_key_file"),
+		),
+		ephemeralvalidator.Conflicting(
+			path.MatchRoot("close_ca_cert_file"),
+			path.MatchRoot("close_ca_cert_directory"),
 		),
 	}
 }

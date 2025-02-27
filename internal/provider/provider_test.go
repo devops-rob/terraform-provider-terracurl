@@ -4,6 +4,8 @@
 package provider
 
 import (
+	"github.com/stretchr/testify/mock"
+	"net/http"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
@@ -16,6 +18,20 @@ import (
 // reattach.
 var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
 	"terracurl": providerserver.NewProtocol6WithError(New("test")()),
+}
+
+type mockClient struct {
+	mock.Mock
+}
+
+func (m *mockClient) Do(r *http.Request) (*http.Response, error) {
+	args := m.Mock.Called(r)
+
+	if resp, ok := args.Get(0).(*http.Response); ok {
+		return resp, args.Error(1)
+	}
+
+	return nil, args.Error(1)
 }
 
 func testAccPreCheck(t *testing.T) {
