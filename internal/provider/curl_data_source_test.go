@@ -260,3 +260,67 @@ EOF
 `, body)
 
 }
+
+func TestAccCurlDataSourceTLS(t *testing.T) {
+	err := os.Setenv("TF_ACC", "true")
+	if err != nil {
+		return
+	}
+	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+	if err != nil {
+		return
+	}
+	defer func() {
+		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
+		if err != nil {
+
+		}
+	}()
+	server, certFile, keyFile, err := createTLSServer()
+	if err != nil {
+		t.Fatalf("failed to create TLS test server: %v. Cert file: %s", err, certFile)
+	}
+	fmt.Printf("CertFile: %s, KeyFile: %s\n", certFile, keyFile)
+	defer server.Close()
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+
+		}
+	}(certFile)
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+
+		}
+	}(keyFile)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDataSourceCurlTLS(server.URL, certFile, keyFile),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("data.terracurl_request.tls_test", "method", "GET"),
+					resource.TestCheckResourceAttr("data.terracurl_request.tls_test", "response", `{"message": "TLS test successful"}`),
+				),
+			},
+		},
+	})
+}
+
+// Terraform config for TLS test
+func testAccDataSourceCurlTLS(url, certFile, keyFile string) string {
+	return fmt.Sprintf(`
+data "terracurl_request" "tls_test" {
+  name 			   = "tls-test"
+  method           = "GET"
+  url              = "%s"
+  response_codes   = ["200"]
+  ca_cert_file     = "%s"
+  cert_file = "%s"
+  key_file  = "%s"
+}
+`, url, certFile, certFile, keyFile)
+}
