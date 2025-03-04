@@ -56,6 +56,8 @@ func TestAccCurlDataSourceBasic(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr("data.terracurl_request.basic_test", "headers.*", "application/json"),
 					resource.TestCheckResourceAttr("data.terracurl_request.basic_test", "request_url_string", "https://example.com/data?id=12345&name=devopsrob"),
 					resource.TestCheckResourceAttr("data.terracurl_request.basic_test", "request_body", RequestBody+"\n"),
+					resource.TestCheckResourceAttr("data.terracurl_request.basic_test", "response_codes.#", "1"),
+					resource.TestCheckResourceAttr("data.terracurl_request.basic_test", "response_codes.0", "200"),
 
 					resource.TestCheckResourceAttr("data.terracurl_request.basic_test", "response", responseBody),
 					resource.TestCheckResourceAttr("data.terracurl_request.basic_test", "status_code", "200"),
