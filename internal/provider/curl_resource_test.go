@@ -403,6 +403,150 @@ EOF
 
 }
 
+func TestAccresourceCurlSkipRead(t *testing.T) {
+	err := os.Setenv("TF_ACC", "true")
+	if err != nil {
+		return
+	}
+	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+	if err != nil {
+		return
+	}
+	defer func() {
+		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
+		if err != nil {
+
+		}
+	}()
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+	httpmock.RegisterResponder(
+		"POST",
+		"https://example.com/create",
+		httpmock.NewStringResponder(200, `{"name": "devopsrob"}`),
+	)
+	httpmock.RegisterResponder(
+		"DELETE",
+		"https://example.com/read",
+		httpmock.NewStringResponder(200, `{"name": "devopsrob"}`),
+	)
+	rName := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testMockEndpointCount("GET https://example.com/read", 0),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccresourceCurlSkipRead(rName, RequestBody),
+			},
+		},
+	})
+
+}
+
+func testAccresourceCurlSkipRead(name string, body string) string {
+	return fmt.Sprintf(`
+resource "terracurl_request" "test" {
+  name           = "%s"
+  url            = "https://example.com/create"
+  response_codes = ["200"]
+
+  request_body = <<EOF
+%s
+EOF
+
+  retry_interval = 1
+  max_retry 	 	= 1
+  method         = "POST"
+
+  skip_destroy  = true
+  skip_read  	= true
+  read_url    	= "https://example.com/read"
+  read_method 	= "GET"
+
+  read_response_codes = [
+	"200", 
+	"204"
+  ]
+
+}
+`, name, body)
+
+}
+
+func TestAccresourceCurlRead(t *testing.T) {
+	err := os.Setenv("TF_ACC", "true")
+	if err != nil {
+		return
+	}
+	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+	if err != nil {
+		return
+	}
+	defer func() {
+		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
+		if err != nil {
+
+		}
+	}()
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+	httpmock.RegisterResponder(
+		"POST",
+		"https://example.com/create",
+		httpmock.NewStringResponder(200, `{"name": "devopsrob"}`),
+	)
+	httpmock.RegisterResponder(
+		"GET",
+		"https://example.com/read",
+		httpmock.NewStringResponder(200, `{"name": "devopsrob"}`),
+	)
+	rName := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testMockEndpointCount("GET https://example.com/read", 1),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccresourceCurlRead(rName, RequestBody),
+			},
+		},
+	})
+
+}
+
+func testAccresourceCurlRead(name string, body string) string {
+	return fmt.Sprintf(`
+resource "terracurl_request" "read" {
+  name           = "%s"
+  url            = "https://example.com/create"
+  response_codes = ["200"]
+
+  request_body = <<EOF
+%s
+EOF
+
+  retry_interval = 1
+  max_retry 	 	= 1
+  method         = "POST"
+
+  skip_destroy  = true
+  skip_read  	= false
+  read_url    	= "https://example.com/read"
+  read_method 	= "GET"
+
+  read_response_codes = [
+	"200", 
+	"204"
+  ]
+
+}
+`, name, body)
+
+}
+
 func testMockEndpointCount(endpoint string, expected int) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		usage := httpmock.GetCallCountInfo()
