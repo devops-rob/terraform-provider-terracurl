@@ -556,3 +556,13 @@ func testMockEndpointCount(endpoint string, expected int) resource.TestCheckFunc
 		return nil
 	}
 }
+
+func testMockEndpointRegister(endpoint string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		usage := httpmock.GetCallCountInfo()
+		if usage[endpoint] < 1 {
+			return fmt.Errorf("endpoint not called")
+		}
+		return nil
+	}
+}

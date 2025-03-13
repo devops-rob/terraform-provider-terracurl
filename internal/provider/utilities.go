@@ -5,6 +5,8 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -99,4 +101,34 @@ func createTlsClient(cfg *TlsConfig) (*http.Client, error) {
 		},
 		Timeout: 30 * time.Second,
 	}, nil
+}
+
+func convertMap(tfMap types.Map) map[string]string {
+	if tfMap.IsNull() || tfMap.IsUnknown() {
+		return nil
+	}
+
+	goMap := make(map[string]string)
+	for k, v := range tfMap.Elements() {
+		if strVal, ok := v.(types.String); ok {
+			goMap[k] = strVal.ValueString()
+		}
+	}
+	return goMap
+}
+
+func convertStringSliceToTFValues(input []string) []attr.Value {
+	values := make([]attr.Value, len(input))
+	for i, str := range input {
+		values[i] = types.StringValue(str) // Convert string to Terraform StringValue
+	}
+	return values
+}
+
+func convertStringMapToTFValues(input map[string]string) map[string]attr.Value {
+	result := make(map[string]attr.Value)
+	for k, v := range input {
+		result[k] = types.StringValue(v)
+	}
+	return result
 }
