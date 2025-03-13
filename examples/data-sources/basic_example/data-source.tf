@@ -4,7 +4,8 @@ data "terracurl_request" "headers_example" {
   response_codes         = ["200"]
   url                    = "http://example.com"
 
-  headers = {
-    Authorization = "Bearer root"
+  request_parameters = {
+    parameter_key   = "parameter_value"
+    parameter_key_2 = "another_parameter_value"
   }
 }
