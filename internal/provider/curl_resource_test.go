@@ -547,6 +547,8 @@ EOF
 
 }
 
+// TODO - Add tests for TLS calls and TLS skip verify calls. Use the same implementation on the epehemeral resource tests
+
 func testMockEndpointCount(endpoint string, expected int) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		usage := httpmock.GetCallCountInfo()

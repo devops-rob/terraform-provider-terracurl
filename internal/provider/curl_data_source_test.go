@@ -326,3 +326,69 @@ data "terracurl_request" "tls_test" {
 }
 `, url, certFile, certFile, keyFile)
 }
+
+// TODO - Add TLS skip verify call tests. Use the same implementation as the ephemeral resource tests
+
+func TestAccCurlDataSourceTLSSkipVerify(t *testing.T) {
+	err := os.Setenv("TF_ACC", "true")
+	if err != nil {
+		return
+	}
+	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+	if err != nil {
+		return
+	}
+	defer func() {
+		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
+		if err != nil {
+
+		}
+	}()
+	server, certFile, keyFile, err := createTLSServer()
+	if err != nil {
+		t.Fatalf("failed to create TLS test server: %v. Cert file: %s", err, certFile)
+	}
+	fmt.Printf("CertFile: %s, KeyFile: %s\n", certFile, keyFile)
+	defer server.Close()
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+
+		}
+	}(certFile)
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+
+		}
+	}(keyFile)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDataSourceCurlTLSSkipVerify(server.URL, certFile, keyFile),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("data.terracurl_request.tls_skip_verify_test", "method", "GET"),
+					resource.TestCheckResourceAttr("data.terracurl_request.tls_skip_verify_test", "response", `{"message": "TLS test successful"}`),
+				),
+			},
+		},
+	})
+}
+
+// Terraform config for TLS test
+func testAccDataSourceCurlTLSSkipVerify(url, certFile, keyFile string) string {
+	return fmt.Sprintf(`
+data "terracurl_request" "tls_skip_verify_test" {
+  name 			   = "tls-test"
+  method           = "GET"
+  url              = "%s"
+  response_codes   = ["200"]
+  cert_file = "%s"
+  key_file  = "%s"
+  skip_tls_verify = true
+}
+`, url, certFile, keyFile)
+}
