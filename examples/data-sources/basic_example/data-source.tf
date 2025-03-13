@@ -8,4 +8,11 @@ data "terracurl_request" "headers_example" {
     parameter_key   = "parameter_value"
     parameter_key_2 = "another_parameter_value"
   }
+
+  request_body = <<EOF
+{
+  "name": "devopsrob",
+  "project": "TerraCurl V2"
+}
+EOF
 }
