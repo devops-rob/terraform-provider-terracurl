@@ -327,8 +327,6 @@ data "terracurl_request" "tls_test" {
 `, url, certFile, certFile, keyFile)
 }
 
-// TODO - Add TLS skip verify call tests. Use the same implementation as the ephemeral resource tests
-
 func TestAccCurlDataSourceTLSSkipVerify(t *testing.T) {
 	err := os.Setenv("TF_ACC", "true")
 	if err != nil {
