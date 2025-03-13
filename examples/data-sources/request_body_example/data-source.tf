@@ -4,9 +4,10 @@ data "terracurl_request" "headers_example" {
   response_codes         = ["200"]
   url                    = "http://example.com"
 
-  request_parameters = {
-    parameter_key   = "parameter_value"
-    parameter_key_2 = "another_parameter_value"
-  }
-
+  request_body = jsonencode(
+    {
+      name = "devopsrob"
+      project = "TerraCurl v2"
+    }
+  )
 }
