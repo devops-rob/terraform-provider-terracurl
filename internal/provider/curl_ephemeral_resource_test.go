@@ -589,3 +589,158 @@ func TestAccEphemeralResourceSkipClose(t *testing.T) {
 	})
 
 }
+
+func testAccCurlEmphemeralResourceWithTLS(url, certFile, keyFile, renewUrl, renewCertFile, renewKeyFile, closeUrl, closeCertFile, closeKeyFile string) string {
+	return fmt.Sprintf(`
+	
+ephemeral "terracurl_request" "ephems" {
+  method          = "POST"
+  name            = "test"
+  response_codes  = ["200"]
+  url             = "%s"
+  cert_file 	  = "%s"
+  ca_cert_file	  = "%s"
+  key_file 		  = "%s"
+  skip_tls_verify = false
+ 
+  skip_renew            = false
+  renew_interval	    = "-10"
+  renew_url             = "%s"
+  renew_response_codes  = ["200"]
+  renew_method          = "GET"
+  renew_cert_file 	    = "%s"
+  renew_ca_cert_file	= "%s"
+  renew_key_file 	    = "%s"
+  renew_skip_tls_verify = false
+
+
+  skip_close            = false
+  close_url             = "%s"
+  close_response_codes  = ["200"]
+  close_method          = "DELETE"
+  close_timeout		    = "20"
+  close_ca_cert_file	= "%s"
+  close_cert_file 	    = "%s"
+  close_key_file 	    = "%s"
+  close_skip_tls_verify = false
+
+}
+
+resource "terracurl_request" "test" {
+  name           = "leader"
+  url            = "https://example.com/create"
+  response_codes = ["200"]
+  method		 = "POST"
+  retry_interval = "6"
+  max_retry		 = "1"
+
+
+  skip_destroy = true
+  skip_read    = true
+
+}
+
+`, url, certFile, certFile, keyFile, renewUrl, renewCertFile, renewCertFile, renewKeyFile, closeUrl, closeCertFile, closeCertFile, closeKeyFile)
+}
+
+func TestAccCurlEmphemeralResourceWithTLS(t *testing.T) {
+	err := os.Setenv("TF_ACC", "true")
+	if err != nil {
+		return
+	}
+	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+	if err != nil {
+		return
+	}
+	defer func() {
+		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
+		if err != nil {
+
+		}
+	}()
+	server, certFile, keyFile, err := createTLSServer()
+	if err != nil {
+		t.Fatalf("failed to create TLS test server for Open(): %v. Cert file: %s", err, certFile)
+	}
+	fmt.Printf("Open server URL: %s\n", server.URL)
+
+	renewServer, renewCertFile, renewKeyFile, err := createTLSServer()
+	if err != nil {
+		t.Fatalf("failed to create TLS test server for Renew(): %v. Cert file: %s", err, certFile)
+	}
+	fmt.Printf("Renew server URL: %s\n", renewServer.URL)
+
+	closeServer, closeCertFile, closeKeyFile, err := createTLSServer()
+	if err != nil {
+		t.Fatalf("failed to create TLS test server for Close(): %v. Cert file: %s", err, certFile)
+	}
+	fmt.Printf("Close server URL: %s\n", closeServer.URL)
+
+	//fmt.Printf("CertFile: %s, KeyFile: %s\n", certFile, keyFile)
+	defer server.Close()
+	defer renewServer.Close()
+	defer closeServer.Close()
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+
+		}
+	}(certFile)
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+
+		}
+	}(keyFile)
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+
+		}
+	}(renewCertFile)
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+
+		}
+	}(renewKeyFile)
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+
+		}
+	}(closeCertFile)
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+
+		}
+	}(closeKeyFile)
+	var callCount int
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+	httpmock.RegisterResponder("POST", "https://example.com/create",
+		func(req *http.Request) (*http.Response, error) {
+			callCount++
+			if callCount == 1 {
+				time.Sleep(2 * time.Second)
+				return httpmock.NewStringResponse(500, "Internal Server Error"), nil
+
+			}
+			return httpmock.NewStringResponse(200, ""), nil
+		},
+	)
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccCurlEmphemeralResourceWithTLS(server.URL, certFile, keyFile, renewServer.URL, renewCertFile, renewKeyFile, closeServer.URL, closeCertFile, closeKeyFile),
+				//Check: resource.ComposeTestCheckFunc(
+				//	resource.TestCheckResourceAttr("data.terracurl_request.tls_test", "method", "GET"),
+				//	resource.TestCheckResourceAttr("data.terracurl_request.tls_test", "response", `{"message": "TLS test successful"}`),
+				//),
+			},
+		},
+	})
+}
