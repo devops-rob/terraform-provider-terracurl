@@ -27,6 +27,9 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: false
+      - name: Clean Go Module Cache
+        run: |
+          go clean -modcache
       - run: go mod download
       - run: go build -v .
       - name: Run linters
