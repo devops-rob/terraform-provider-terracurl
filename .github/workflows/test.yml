@@ -19,6 +19,8 @@ jobs:
   # Ensure project builds before running testing matrix
   build:
     name: Build
+    container:
+      image: golang:latest
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
