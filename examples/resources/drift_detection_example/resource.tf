@@ -27,6 +27,8 @@ resource "terracurl_request" "test" {
     Content-Type  = "application/json"
   }
 
+  ignore_response_fields = ["request_id"]
+
   skip_destroy           = false
   destroy_method         = "DELETE"
   destroy_url            = "http://localhost:8200/v1/sys/mounts/aws"
@@ -36,7 +38,5 @@ resource "terracurl_request" "test" {
     X-Vault-Token = "root"
     Content-Type  = "application/json"
   }
-
-  ignore_response_fields = ["request_id"]
 
 }
