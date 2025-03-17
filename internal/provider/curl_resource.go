@@ -482,7 +482,9 @@ func (r *CurlResource) Create(ctx context.Context, req resource.CreateRequest, r
 		if err != nil {
 			resp.Diagnostics.AddError("TLS Client Creation Failed", err.Error())
 			return
-		} else {
+		}
+
+	} else {
 		// Use default non-TLS client
 		client = &http.Client{
 			Timeout: 30 * time.Second,
