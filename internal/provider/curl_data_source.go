@@ -146,11 +146,8 @@ func (d *CurlDataSource) Schema(ctx context.Context, req datasource.SchemaReques
 func (d *CurlDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var data CurlDataSourceModel
 
-	// Read Terraform configuration data into the model
+	// Read Terraform configuration data into the model.
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
-
-	// Typically data sources will make external calls, however this example
-	// hardcodes setting the id attribute to a specific value for brevity.
 
 	data.ID = types.StringValue(data.Name.ValueString())
 
@@ -160,7 +157,7 @@ func (d *CurlDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	var err error
 
 	if useTLS {
-		// Build TLS Config
+		// Build TLS Config.
 		tlsConfig := &TlsConfig{
 			CertFile:        data.CertFile.ValueString(),
 			KeyFile:         data.KeyFile.ValueString(),
@@ -169,13 +166,13 @@ func (d *CurlDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 			SkipTlsVerify:   data.SkipTlsVerify.ValueBool(),
 		}
 
-		// Validate TLS settings
+		// Validate TLS settings.
 		if tlsConfig.CertFile != "" && tlsConfig.KeyFile == "" {
 			resp.Diagnostics.AddError("Validation Error", "`key_file` must be set if `cert_file` is set.")
 			return
 		}
 
-		// Create TLS-enabled client
+		// Create TLS-enabled client.
 		client, err = createTlsClient(tlsConfig)
 		if err != nil {
 			resp.Diagnostics.AddError("TLS Client Creation Failed", err.Error())
@@ -183,7 +180,7 @@ func (d *CurlDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		}
 
 	} else {
-		// Use default non-TLS client
+		// Use default non-TLS client.
 		client = &http.Client{
 			Timeout: 30 * time.Second,
 		}
@@ -196,7 +193,7 @@ func (d *CurlDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		return
 	}
 
-	// Add headers
+	// Add headers.
 	if !data.Headers.IsNull() && !data.Headers.IsUnknown() {
 		for k, v := range data.Headers.Elements() {
 			if strVal, ok := v.(types.String); ok {
@@ -205,7 +202,7 @@ func (d *CurlDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		}
 	}
 
-	// Add query parameters
+	// Add query parameters.
 	if !data.RequestParameters.IsNull() && !data.RequestParameters.IsUnknown() {
 		params := request.URL.Query()
 		for k, v := range data.RequestParameters.Elements() {
@@ -280,7 +277,7 @@ func (d *CurlDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	data.Response = types.StringValue(bodyString)
 	data.StatusCode = types.StringValue(strconv.Itoa(statusCode))
 
-	// Save data into Terraform state
+	// Save data into Terraform state.
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 

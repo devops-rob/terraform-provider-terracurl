@@ -13,23 +13,23 @@ import (
 )
 
 func sanitizeResponse(response string, fieldsToIgnore []string) (string, error) {
-	// Return early if the response is empty
+	// Return early if the response is empty.
 	if response == "" {
 		return "", nil
 	}
 
 	var jsonObj map[string]interface{}
 	if err := json.Unmarshal([]byte(response), &jsonObj); err != nil {
-		// Return the original response if it's not a JSON object
+		// Return the original response if it's not a JSON object.
 		return response, nil
 	}
 
-	// Remove ignored fields
+	// Remove ignored fields.
 	for _, field := range fieldsToIgnore {
 		delete(jsonObj, field)
 	}
 
-	// Convert back to JSON
+	// Convert back to JSON.
 	filteredBytes, err := json.Marshal(jsonObj)
 	if err != nil {
 		return "", fmt.Errorf("failed to serialize filtered JSON: %v", err)
@@ -56,7 +56,7 @@ type TlsConfig struct {
 	SkipTlsVerify   bool
 }
 
-// defaultTlsConfig returns a default TlsConfig instance
+// defaultTlsConfig returns a default TlsConfig instance.
 func defaultTlsConfig() *TlsConfig {
 	return &TlsConfig{}
 }
@@ -71,7 +71,7 @@ func createTlsClient(cfg *TlsConfig) (*http.Client, error) {
 		certificates = append(certificates, cert)
 	}
 
-	// Load CA certificates
+	// Load CA certificates.
 	rootCAs, _ := x509.SystemCertPool()
 	if rootCAs == nil {
 		rootCAs = x509.NewCertPool()
@@ -87,14 +87,14 @@ func createTlsClient(cfg *TlsConfig) (*http.Client, error) {
 		}
 	}
 
-	// Build TLS configuration
+	// Build TLS configuration.
 	tlsConfig := &tls.Config{
 		Certificates:       certificates,
 		RootCAs:            rootCAs,
 		InsecureSkipVerify: cfg.SkipTlsVerify,
 	}
 
-	// Create the TLS-enabled HTTP client
+	// Create the TLS-enabled HTTP client.
 	return &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsConfig,
@@ -120,7 +120,7 @@ func convertMap(tfMap types.Map) map[string]string {
 func convertStringSliceToTFValues(input []string) []attr.Value {
 	values := make([]attr.Value, len(input))
 	for i, str := range input {
-		values[i] = types.StringValue(str) // Convert string to Terraform StringValue
+		values[i] = types.StringValue(str)
 	}
 	return values
 }

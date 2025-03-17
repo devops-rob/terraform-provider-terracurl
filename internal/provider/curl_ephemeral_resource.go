@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
@@ -31,14 +30,14 @@ func (e *EphemeralCurlResource) Metadata(ctx context.Context, req ephemeral.Meta
 	resp.TypeName = req.ProviderTypeName + "_request"
 }
 
-// EphemeralResources With the provider.ProviderWithEphemeralResources implementation
+// EphemeralResources With the provider.ProviderWithEphemeralResources implementation.
 func (p *TerraCurlProvider) EphemeralResources(_ context.Context) []func() ephemeral.EphemeralResource {
 	return []func() ephemeral.EphemeralResource{
 		NewCurlEphemeralResource,
 	}
 }
 
-// NewCurlEphemeralResource With the ephemeral.EphemeralResource implementation
+// NewCurlEphemeralResource With the ephemeral.EphemeralResource implementation.
 func NewCurlEphemeralResource() ephemeral.EphemeralResource {
 	return &EphemeralCurlResource{}
 }
@@ -353,7 +352,7 @@ func (e *EphemeralCurlResource) Open(ctx context.Context, req ephemeral.OpenRequ
 	tflog.Debug(ctx, "Running open()")
 	var data CurlEphemeralModel
 
-	// Read Terraform config data into the model
+	// Read Terraform config data into the model.
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -381,7 +380,7 @@ func (e *EphemeralCurlResource) Open(ctx context.Context, req ephemeral.OpenRequ
 
 	data.Id = types.StringValue(data.Name.ValueString())
 
-	// useTLS is used to decide
+	// useTLS is used to decide.
 	useTLS := !data.CertFile.IsNull() || !data.KeyFile.IsNull() || !data.CaCertFile.IsNull() || !data.CaCertDirectory.IsNull()
 
 	var client *http.Client
@@ -389,7 +388,7 @@ func (e *EphemeralCurlResource) Open(ctx context.Context, req ephemeral.OpenRequ
 
 	if useTLS {
 		tflog.Debug(ctx, "Creating TLS enabled client")
-		// Build TLS Config
+		// Build TLS Config.
 		tlsConfig := &TlsConfig{
 			CertFile:        data.CertFile.ValueString(),
 			KeyFile:         data.KeyFile.ValueString(),
@@ -398,13 +397,13 @@ func (e *EphemeralCurlResource) Open(ctx context.Context, req ephemeral.OpenRequ
 			SkipTlsVerify:   data.SkipTlsVerify.ValueBool(),
 		}
 
-		// Validate TLS settings
+		// Validate TLS settings.
 		if tlsConfig.CertFile != "" && tlsConfig.KeyFile == "" {
 			resp.Diagnostics.AddError("Validation Error", "`key_file` must be set if `cert_file` is set.")
 			return
 		}
 
-		// Create TLS-enabled client
+		// Create TLS-enabled client.
 		client, err = createTlsClient(tlsConfig)
 		if err != nil {
 			resp.Diagnostics.AddError("TLS Client Creation Failed", err.Error())
@@ -412,7 +411,7 @@ func (e *EphemeralCurlResource) Open(ctx context.Context, req ephemeral.OpenRequ
 		}
 
 	} else {
-		// Use default non-TLS client
+		// Use default non-TLS client.
 		client = &http.Client{
 			Timeout: 30 * time.Second,
 		}
@@ -425,7 +424,7 @@ func (e *EphemeralCurlResource) Open(ctx context.Context, req ephemeral.OpenRequ
 		return
 	}
 
-	// Add headers
+	// Add headers.
 	if !data.Headers.IsNull() && !data.Headers.IsUnknown() {
 		for k, v := range data.Headers.Elements() {
 			if strVal, ok := v.(types.String); ok {
@@ -434,7 +433,7 @@ func (e *EphemeralCurlResource) Open(ctx context.Context, req ephemeral.OpenRequ
 		}
 	}
 
-	// Add query parameters
+	// Add query parameters.
 	if !data.RequestParameters.IsNull() && !data.RequestParameters.IsUnknown() {
 		params := request.URL.Query()
 		for k, v := range data.RequestParameters.Elements() {
@@ -605,7 +604,7 @@ func (e *EphemeralCurlResource) Open(ctx context.Context, req ephemeral.OpenRequ
 	resp.Private.SetKey(ctx, "response", privateBytes)
 	resp.Result.Set(ctx, privateData)
 
-	// Save data into ephemeral result data
+	// Save data into ephemeral result data.
 	resp.Diagnostics.Append(resp.Result.Set(ctx, data)...)
 }
 
@@ -645,7 +644,7 @@ func (e *EphemeralCurlResource) Renew(ctx context.Context, req ephemeral.RenewRe
 
 	var renewResponseCodes []string
 
-	// Check if the key exists AND is not nil before asserting type
+	// Check if the key exists AND is not nil before asserting type.
 	if rawList, exists := privateMap["RenewResponseCodes"]; exists && rawList != nil {
 		switch v := rawList.(type) {
 		case []interface{}:
@@ -667,11 +666,11 @@ func (e *EphemeralCurlResource) Renew(ctx context.Context, req ephemeral.RenewRe
 			return
 		}
 	} else {
-		// If attribute is missing, default to an empty slice without throwing an error
+		// If attribute is missing, default to an empty slice without throwing an error.
 		renewResponseCodes = []string{}
 	}
 
-	// Convert to Terraform ListValue
+	// Convert to Terraform ListValue.
 	renewResponseCodesList, diags := types.ListValue(
 		types.StringType,
 		convertStringSliceToTFValues(renewResponseCodes),
@@ -705,7 +704,7 @@ func (e *EphemeralCurlResource) Renew(ctx context.Context, req ephemeral.RenewRe
 		}
 	}
 
-	// Convert to Terraform types.Map
+	// Convert to Terraform types.Map.
 	renewHeadersTF, diags := types.MapValue(types.StringType, convertStringMapToTFValues(renewHeaders))
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
@@ -731,7 +730,7 @@ func (e *EphemeralCurlResource) Renew(ctx context.Context, req ephemeral.RenewRe
 		}
 	}
 
-	// Convert to Terraform types.Map
+	// Convert to Terraform types.Map.
 	renewParametersTF, diags := types.MapValue(types.StringType, convertStringMapToTFValues(renewParameters))
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
@@ -821,7 +820,7 @@ func (e *EphemeralCurlResource) Renew(ctx context.Context, req ephemeral.RenewRe
 
 	var closeResponseCodes []string
 
-	// Check if the key exists AND is not nil before asserting type
+	// Check if the key exists AND is not nil before asserting type.
 	if rawList, exists := privateMap["CloseResponseCodes"]; exists && rawList != nil {
 		switch v := rawList.(type) {
 		case []interface{}:
@@ -843,11 +842,11 @@ func (e *EphemeralCurlResource) Renew(ctx context.Context, req ephemeral.RenewRe
 			return
 		}
 	} else {
-		// If attribute is missing, default to an empty slice without throwing an error
+		// If attribute is missing, default to an empty slice without throwing an error.
 		closeResponseCodes = []string{}
 	}
 
-	// Convert to Terraform ListValue
+	// Convert to Terraform ListValue.
 	closeResponseCodesList, diags := types.ListValue(
 		types.StringType,
 		convertStringSliceToTFValues(closeResponseCodes),
@@ -857,15 +856,13 @@ func (e *EphemeralCurlResource) Renew(ctx context.Context, req ephemeral.RenewRe
 		return
 	}
 
-	//tflog.Debug(ctx, fmt.Sprintf("Converted response codes list: %v", privateMap["CloseResponseCodes"]))
-
 	closeRequestBody, ok := privateMap["CloseRequestBody"].(string)
 	if !ok {
 		resp.Diagnostics.AddError("Type Assertion Error", "CloseRequestBody is not a string")
 		return
 	}
 
-	closeHeaders := make(map[string]string) // Default to empty map
+	closeHeaders := make(map[string]string)
 	if rawCloseHeaders, exists := privateMap["CloseHeaders"]; exists && rawCloseHeaders != nil {
 		if rawHeaders, ok := rawCloseHeaders.(map[string]interface{}); ok {
 			for key, value := range rawHeaders {
@@ -882,7 +879,7 @@ func (e *EphemeralCurlResource) Renew(ctx context.Context, req ephemeral.RenewRe
 		}
 	}
 
-	// Convert to Terraform types.Map
+	// Convert to Terraform types.Map.
 	closeHeadersTF, diags := types.MapValue(types.StringType, convertStringMapToTFValues(closeHeaders))
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
@@ -908,7 +905,7 @@ func (e *EphemeralCurlResource) Renew(ctx context.Context, req ephemeral.RenewRe
 		}
 	}
 
-	// Convert to Terraform types.Map
+	// Convert to Terraform types.Map.
 	closeParametersTF, diags := types.MapValue(types.StringType, convertStringMapToTFValues(closeParameters))
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
@@ -1499,7 +1496,7 @@ func (e *EphemeralCurlResource) Close(ctx context.Context, req ephemeral.CloseRe
 			return
 		}
 
-		bodyBytes, _ = ioutil.ReadAll(response.Body)
+		bodyBytes, _ = io.ReadAll(response.Body)
 		statusCode = response.StatusCode
 		err = response.Body.Close()
 		if err != nil {

@@ -751,7 +751,6 @@ func TestAccCurlResourceWithTLSSkipVerify(t *testing.T) {
 		t.Fatalf("failed to create TLS test server for Destroy operation: %v. Cert file: %s", err, certFile)
 	}
 
-	//fmt.Printf("CertFile: %s, KeyFile: %s\n", certFile, keyFile)
 	defer server.Close()
 	defer readServer.Close()
 	defer destroyServer.Close()
@@ -796,7 +795,7 @@ func TestAccCurlResourceWithTLSSkipVerify(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccresourceCurlTls("tls_test", server.URL, certFile, certFile, keyFile, readServer.URL, readCertFile, readCertFile, readKeyFile, destroyServer.URL, destroyCertFile, destroyCertFile, destroyKeyFile),
+				Config: testAccresourceCurlTlsSkipVerify("tls_test", server.URL, certFile, keyFile, readServer.URL, readCertFile, readKeyFile, destroyServer.URL, destroyCertFile, destroyKeyFile),
 				Check:  resource.TestCheckResourceAttr("terracurl_request.tls_test", "response", `{"message": "TLS test successful"}`),
 			},
 		},

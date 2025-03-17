@@ -43,7 +43,7 @@ func TestAccCurlDataSourceBasic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, // Use ProtoV6 Provider
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccDataSourceCurlRequestBasic(rName, RequestBody),
@@ -116,7 +116,7 @@ func TestAccCurlDataSourceRetries(t *testing.T) {
 	var firstCall time.Time
 	var callCount int
 
-	// Register the responder to simulate a failure followed by a success
+	// Register the responder to simulate a failure followed by a success.
 	httpmock.RegisterResponder("POST", "https://example.com/data",
 		func(req *http.Request) (*http.Response, error) {
 			callCount++
@@ -130,7 +130,7 @@ func TestAccCurlDataSourceRetries(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, // Use ProtoV6 Provider
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccdataSourceCurlBodyWithRetry(RequestBody),
@@ -140,7 +140,7 @@ func TestAccCurlDataSourceRetries(t *testing.T) {
 							return fmt.Errorf("expected http request to be made 2 times. It was made %v times", callCount)
 						}
 
-						// Ensure the test has run for longer than the retry interval
+						// Ensure the test has run for longer than the retry interval.
 						duration := time.Since(firstCall)
 						if duration < 1*time.Second {
 							return fmt.Errorf("expected test to have taken longer than the retry interval of 1s, test duration: %s", duration)
@@ -197,15 +197,14 @@ func TestAccdataSourceCurlRequestTimeout(t *testing.T) {
 		"POST",
 		"https://example.com/create",
 		func(req *http.Request) (*http.Response, error) {
-			//time.Sleep(2 * time.Second) // Delay the response by 6 seconds
 			return httpmock.NewStringResponse(200, `{"name": "devopsrob"}`), nil
 		},
 	)
 
-	start := time.Now() // Record the start time
+	start := time.Now() // Record the start time.
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, // Use ProtoV6 Provider
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				PlanOnly: true,
@@ -216,7 +215,7 @@ func TestAccdataSourceCurlRequestTimeout(t *testing.T) {
 			},
 		},
 	})
-	duration := time.Since(start) // Calculate the duration of the API call
+	duration := time.Since(start)
 	t.Logf("API call took %v", duration)
 }
 
@@ -234,7 +233,7 @@ func testCheckDurationWithTimeout() resource.TestCheckFunc {
 		if duration < 1*time.Second || duration > 30*time.Second {
 			return fmt.Errorf("expected duration between 1 and 30 seconds, got %v", duration)
 		}
-		// Check for timeout error message
+		// Check for timeout error message.
 		if !strings.Contains(resourceState.Primary.Attributes["response"], "context canceled, not retrying operation") &&
 			!strings.Contains(resourceState.Primary.Attributes["response"], "request failed, retries exceeded") {
 			return fmt.Errorf("expected error message not found in response")
@@ -312,7 +311,7 @@ func TestAccCurlDataSourceTLS(t *testing.T) {
 	})
 }
 
-// Terraform config for TLS test
+// Terraform config for TLS test.
 func testAccDataSourceCurlTLS(url, certFile, keyFile string) string {
 	return fmt.Sprintf(`
 data "terracurl_request" "tls_test" {
@@ -376,7 +375,7 @@ func TestAccCurlDataSourceTLSSkipVerify(t *testing.T) {
 	})
 }
 
-// Terraform config for TLS test
+// Terraform config for TLS test.
 func testAccDataSourceCurlTLSSkipVerify(url, certFile, keyFile string) string {
 	return fmt.Sprintf(`
 data "terracurl_request" "tls_skip_verify_test" {

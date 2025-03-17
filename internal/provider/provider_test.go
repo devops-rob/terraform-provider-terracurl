@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package provider
 
@@ -8,7 +8,6 @@ import (
 	"crypto/tls"
 	"encoding/hex"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/stretchr/testify/mock"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -27,19 +26,19 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 	"terracurl": providerserver.NewProtocol6WithError(New("test")()),
 }
 
-type mockClient struct {
-	mock.Mock
-}
+//type mockClient struct {
+//	mock.Mock
+//}
 
-func (m *mockClient) Do(r *http.Request) (*http.Response, error) {
-	args := m.Mock.Called(r)
-
-	if resp, ok := args.Get(0).(*http.Response); ok {
-		return resp, args.Error(1)
-	}
-
-	return nil, args.Error(1)
-}
+//func (m *mockClient) Do(r *http.Request) (*http.Response, error) {
+//	args := m.Mock.Called(r)
+//
+//	if resp, ok := args.Get(0).(*http.Response); ok {
+//		return resp, args.Error(1)
+//	}
+//
+//	return nil, args.Error(1)
+//}
 
 const localCert = `-----BEGIN CERTIFICATE-----
 MIICnDCCAkOgAwIBAgIRAJ7vRKfNUfgTzPf3A2usN5MwCgYIKoZIzj0EAwIwgbkx
@@ -58,42 +57,42 @@ bGhvc3SHBH8AAAEwCgYIKoZIzj0EAwIDRwAwRAIgI3d9t7SOR9RaTrnFWGh+igXE
 4bZYvsUcWL2V9mA5T3MCIFH7XfGUEwuviYHt6Py1X9yaI5lcRxjgSOkFMMIsoY01
 -----END CERTIFICATE-----`
 
-// Mock private key for TLS server
+// Mock private key for TLS server.
 const localKey = `-----BEGIN EC PRIVATE KEY-----
 MHcCAQEEIHa08Nf/lf7KXSMcRwnhNOI5rpJsykbo4ZGImsZndeHYoAoGCCqGSM49
 AwEHoUQDQgAEjLj2Ay/hhLhJ1cC5Rp7/bkucDS+MrS8Te7HpXmQJAQt4DsMWbP9K
 J9dc0LcE8rTwitkoLiTtjMl/y9J+I6jqHw==
 -----END EC PRIVATE KEY-----`
 
-const localCaCert = `-----BEGIN CERTIFICATE-----
-MIIC7zCCApSgAwIBAgIRAIbF3DbRPw3xEog94qQ5oZUwCgYIKoZIzj0EAwIwgbkx
-CzAJBgNVBAYTAlVTMQswCQYDVQQIEwJDQTEWMBQGA1UEBxMNU2FuIEZyYW5jaXNj
-bzEaMBgGA1UECRMRMTAxIFNlY29uZCBTdHJlZXQxDjAMBgNVBBETBTk0MTA1MRcw
-FQYDVQQKEw5IYXNoaUNvcnAgSW5jLjFAMD4GA1UEAxM3Q29uc3VsIEFnZW50IENB
-IDE3OTE0MzkwMDM4OTUwMjI2MjM2Njc1OTk3NzcwNTA5NjcxNjY5MzAeFw0yNTAy
-MjcxMzMxMDJaFw0zMDAyMjYxMzMxMDJaMIG5MQswCQYDVQQGEwJVUzELMAkGA1UE
-CBMCQ0ExFjAUBgNVBAcTDVNhbiBGcmFuY2lzY28xGjAYBgNVBAkTETEwMSBTZWNv
-bmQgU3RyZWV0MQ4wDAYDVQQREwU5NDEwNTEXMBUGA1UEChMOSGFzaGlDb3JwIElu
-Yy4xQDA+BgNVBAMTN0NvbnN1bCBBZ2VudCBDQSAxNzkxNDM5MDAzODk1MDIyNjIz
-NjY3NTk5Nzc3MDUwOTY3MTY2OTMwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQ/
-UUzw4oVoTwlfz3LyOcEwjkgnDTkRAswgg3uX8uMHnXuAAowtMWZn1YoZBtSRzkk8
-XwO/3Chhwicg6P1lww97o3sweTAOBgNVHQ8BAf8EBAMCAYYwDwYDVR0TAQH/BAUw
-AwEB/zApBgNVHQ4EIgQgoQHGYd5N8AO12lsXVLDDfQlciWetioTKD7Q8NtlbrJcw
-KwYDVR0jBCQwIoAgoQHGYd5N8AO12lsXVLDDfQlciWetioTKD7Q8NtlbrJcwCgYI
-KoZIzj0EAwIDSQAwRgIhAKryzgZzELmfEMhP+vMVldV1qZg20WW+WQvlHCXrbB5b
-AiEAuQ3n4H00QArzgaj+57yW7KCJu1Pi1WBXsfRStDUte9E=
------END CERTIFICATE-----`
+//const localCaCert = `-----BEGIN CERTIFICATE-----
+//MIIC7zCCApSgAwIBAgIRAIbF3DbRPw3xEog94qQ5oZUwCgYIKoZIzj0EAwIwgbkx
+//CzAJBgNVBAYTAlVTMQswCQYDVQQIEwJDQTEWMBQGA1UEBxMNU2FuIEZyYW5jaXNj
+//bzEaMBgGA1UECRMRMTAxIFNlY29uZCBTdHJlZXQxDjAMBgNVBBETBTk0MTA1MRcw
+//FQYDVQQKEw5IYXNoaUNvcnAgSW5jLjFAMD4GA1UEAxM3Q29uc3VsIEFnZW50IENB
+//IDE3OTE0MzkwMDM4OTUwMjI2MjM2Njc1OTk3NzcwNTA5NjcxNjY5MzAeFw0yNTAy
+//MjcxMzMxMDJaFw0zMDAyMjYxMzMxMDJaMIG5MQswCQYDVQQGEwJVUzELMAkGA1UE
+//CBMCQ0ExFjAUBgNVBAcTDVNhbiBGcmFuY2lzY28xGjAYBgNVBAkTETEwMSBTZWNv
+//bmQgU3RyZWV0MQ4wDAYDVQQREwU5NDEwNTEXMBUGA1UEChMOSGFzaGlDb3JwIElu
+//Yy4xQDA+BgNVBAMTN0NvbnN1bCBBZ2VudCBDQSAxNzkxNDM5MDAzODk1MDIyNjIz
+//NjY3NTk5Nzc3MDUwOTY3MTY2OTMwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQ/
+//UUzw4oVoTwlfz3LyOcEwjkgnDTkRAswgg3uX8uMHnXuAAowtMWZn1YoZBtSRzkk8
+//XwO/3Chhwicg6P1lww97o3sweTAOBgNVHQ8BAf8EBAMCAYYwDwYDVR0TAQH/BAUw
+//AwEB/zApBgNVHQ4EIgQgoQHGYd5N8AO12lsXVLDDfQlciWetioTKD7Q8NtlbrJcw
+//KwYDVR0jBCQwIoAgoQHGYd5N8AO12lsXVLDDfQlciWetioTKD7Q8NtlbrJcwCgYI
+//KoZIzj0EAwIDSQAwRgIhAKryzgZzELmfEMhP+vMVldV1qZg20WW+WQvlHCXrbB5b
+//AiEAuQ3n4H00QArzgaj+57yW7KCJu1Pi1WBXsfRStDUte9E=
+//-----END CERTIFICATE-----`
 
-const localCaKey = `-----BEGIN EC PRIVATE KEY-----
-MHcCAQEEIMn8/saUQ0mFuujfsN/wWW7scKbzoPaN0O4aaEkLL5e+oAoGCCqGSM49
-AwEHoUQDQgAEP1FM8OKFaE8JX89y8jnBMI5IJw05EQLMIIN7l/LjB517gAKMLTFm
-Z9WKGQbUkc5JPF8Dv9woYcInIOj9ZcMPew==
------END EC PRIVATE KEY-----`
+//const localCaKey = `-----BEGIN EC PRIVATE KEY-----
+//MHcCAQEEIMn8/saUQ0mFuujfsN/wWW7scKbzoPaN0O4aaEkLL5e+oAoGCCqGSM49
+//AwEHoUQDQgAEP1FM8OKFaE8JX89y8jnBMI5IJw05EQLMIIN7l/LjB517gAKMLTFm
+//Z9WKGQbUkc5JPF8Dv9woYcInIOj9ZcMPew==
+//-----END EC PRIVATE KEY-----`
 
 func createTLSServer() (*httptest.Server, string, string, error) {
 	log.Println("createTLSServer() called...")
 
-	// Save cert & key to temp files
+	// Save cert & key to temp files.
 	certFile, err := saveTempFile([]byte(localCert))
 	if err != nil {
 		log.Printf("Failed to create cert file: %v\n", err)
@@ -106,7 +105,7 @@ func createTLSServer() (*httptest.Server, string, string, error) {
 		return nil, "", "", err
 	}
 
-	// Read and print file contents
+	// Read and print file contents.
 	certContent, err := os.ReadFile(certFile)
 	if err != nil {
 		log.Printf("Failed to read cert file: %v\n", err)
@@ -128,7 +127,7 @@ func createTLSServer() (*httptest.Server, string, string, error) {
 	log.Printf("Cert file hex:\n%s", certHex)
 	log.Printf("Key file hex:\n%s", keyHex)
 
-	// Load the TLS key pair
+	// Load the TLS key pair.
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
 		log.Printf("Failed to load X509KeyPair: %v\n", err)
@@ -137,7 +136,7 @@ func createTLSServer() (*httptest.Server, string, string, error) {
 
 	log.Println("TLS key pair loaded successfully!")
 
-	// Create test TLS server
+	// Create test TLS server.
 	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, err := w.Write([]byte(`{"message": "TLS test successful"}`))
@@ -158,8 +157,7 @@ func createTLSServer() (*httptest.Server, string, string, error) {
 }
 
 func saveTempFile(data []byte) (string, error) {
-	data = bytes.TrimSpace(data) // Ensure no trailing spaces or newlines
-
+	data = bytes.TrimSpace(data)
 	tmpFile, err := os.CreateTemp("", "tls-test-*.pem")
 	if err != nil {
 		log.Printf("Error creating temp file: %v\n", err)
@@ -185,35 +183,35 @@ func saveTempFile(data []byte) (string, error) {
 func TestSaveTempFile(t *testing.T) {
 	log.Println("Running TestSaveTempFile...")
 
-	// Fake certificate data
+	// Fake certificate data.
 	testCert := `-----BEGIN CERTIFICATE-----
 MIIDXTCCAkWgAwIBAgIJAOiL+Fc8m4n9MA0GCSqGSIb3DQEBCwUAMEUxCzAJBgNV
 ...
 -----END CERTIFICATE-----`
 
-	// Attempt to save the file
+	// Attempt to save the file.
 	filePath, err := saveTempFile([]byte(testCert))
 	if err != nil {
 		t.Fatalf("saveTempFile() failed: %v", err)
 	}
 
-	// Ensure the file exists
+	// Ensure the file exists.
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		t.Fatalf("saveTempFile() did not create a file: %s", filePath)
 	}
 
-	// Read the file content
+	// Read the file content.
 	content, err := os.ReadFile(filePath)
 	if err != nil {
 		t.Fatalf("Failed to read created temp file: %v", err)
 	}
 
-	// Ensure content is correct
+	// Ensure content is correct.
 	if string(content) != testCert {
 		t.Fatalf("File content does not match expected cert data")
 	}
 
-	// Cleanup
+	// Cleanup.
 	err = os.Remove(filePath)
 	if err != nil {
 		return
@@ -237,8 +235,8 @@ func testAccCheckRequestDestroy(s *terraform.State) error {
 	return nil
 }
 
-// Helper function to identify "not found" errors
+// Helper function to identify "not found" errors.
 func isNotFoundError(err error) bool {
-	// Replace with the actual check for your API
+	// Replace with the actual check for your API.
 	return err != nil && err.Error() == "resource not found"
 }

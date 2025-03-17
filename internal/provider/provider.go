@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: MPL-2.0.
 
 package provider
 
@@ -61,9 +61,8 @@ func (p *TerraCurlProvider) Configure(ctx context.Context, req provider.Configur
 	}
 
 	// Configuration values are now available.
-	// if data.Endpoint.IsNull() { /* ... */ }
 
-	// Example client configuration for data sources and resources
+	// Example client configuration for data sources and resources.
 	client := http.DefaultClient
 	resp.DataSourceData = client
 	resp.ResourceData = client
