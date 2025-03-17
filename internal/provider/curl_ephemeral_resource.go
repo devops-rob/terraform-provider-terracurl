@@ -477,7 +477,7 @@ func (e *EphemeralCurlResource) Open(ctx context.Context, req ephemeral.OpenRequ
 				return
 			}
 		}(response.Body)
-		body, _ = ioutil.ReadAll(response.Body)
+		body, _ = io.ReadAll(response.Body)
 		statusCode = response.StatusCode
 
 		bodyString = string(body)
@@ -1138,7 +1138,7 @@ func (e *EphemeralCurlResource) Renew(ctx context.Context, req ephemeral.RenewRe
 				return
 			}
 		}(response.Body)
-		body, _ = ioutil.ReadAll(response.Body)
+		body, _ = io.ReadAll(response.Body)
 		statusCode = response.StatusCode
 
 		bodyString = string(body)

@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -78,7 +78,7 @@ func createTlsClient(cfg *TlsConfig) (*http.Client, error) {
 	}
 
 	if cfg.CaCertFile != "" {
-		caCert, err := ioutil.ReadFile(cfg.CaCertFile)
+		caCert, err := os.ReadFile(cfg.CaCertFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read CA cert file: %v", err)
 		}

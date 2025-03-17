@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
@@ -551,7 +550,7 @@ func (r *CurlResource) Create(ctx context.Context, req resource.CreateRequest, r
 				return
 			}
 		}(response.Body)
-		body, _ = ioutil.ReadAll(response.Body)
+		body, _ = io.ReadAll(response.Body)
 		statusCode = response.StatusCode
 
 		bodyString = string(body)
@@ -691,7 +690,7 @@ func (r *CurlResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}(httpResp.Body)
 
 	// Read and store the response
-	bodyBytes, _ := ioutil.ReadAll(httpResp.Body)
+	bodyBytes, _ := io.ReadAll(httpResp.Body)
 	newResponse := string(bodyBytes)
 
 	// ===== DRIFT DETECTION =====
@@ -861,7 +860,7 @@ func (r *CurlResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 			return
 		}
 
-		bodyBytes, _ = ioutil.ReadAll(response.Body)
+		bodyBytes, _ = io.ReadAll(response.Body)
 		statusCode = response.StatusCode
 		err = response.Body.Close()
 		if err != nil {

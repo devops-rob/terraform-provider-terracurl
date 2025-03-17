@@ -9,7 +9,6 @@ import (
 	"encoding/hex"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stretchr/testify/mock"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -108,13 +107,13 @@ func createTLSServer() (*httptest.Server, string, string, error) {
 	}
 
 	// Read and print file contents
-	certContent, err := ioutil.ReadFile(certFile)
+	certContent, err := os.ReadFile(certFile)
 	if err != nil {
 		log.Printf("Failed to read cert file: %v\n", err)
 		return nil, "", "", err
 	}
 
-	keyContent, err := ioutil.ReadFile(keyFile)
+	keyContent, err := os.ReadFile(keyFile)
 	if err != nil {
 		log.Printf("Failed to read key file: %v\n", err)
 		return nil, "", "", err
@@ -161,7 +160,7 @@ func createTLSServer() (*httptest.Server, string, string, error) {
 func saveTempFile(data []byte) (string, error) {
 	data = bytes.TrimSpace(data) // Ensure no trailing spaces or newlines
 
-	tmpFile, err := ioutil.TempFile("", "tls-test-*.pem")
+	tmpFile, err := os.CreateTemp("", "tls-test-*.pem")
 	if err != nil {
 		log.Printf("Error creating temp file: %v\n", err)
 		return "", err
@@ -204,7 +203,7 @@ MIIDXTCCAkWgAwIBAgIJAOiL+Fc8m4n9MA0GCSqGSIb3DQEBCwUAMEUxCzAJBgNV
 	}
 
 	// Read the file content
-	content, err := ioutil.ReadFile(filePath)
+	content, err := os.ReadFile(filePath)
 	if err != nil {
 		t.Fatalf("Failed to read created temp file: %v", err)
 	}

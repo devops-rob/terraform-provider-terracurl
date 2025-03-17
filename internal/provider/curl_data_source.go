@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
@@ -249,7 +248,7 @@ func (d *CurlDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 				return
 			}
 		}(response.Body)
-		body, _ = ioutil.ReadAll(response.Body)
+		body, _ = io.ReadAll(response.Body)
 		statusCode = response.StatusCode
 
 		bodyString = string(body)

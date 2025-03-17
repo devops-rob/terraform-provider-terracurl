@@ -51,10 +51,10 @@ func TestAccEphemeralResource(t *testing.T) {
 	if err != nil {
 		return
 	}
-	err = os.Setenv("TF_LOG", "debug")
-	if err != nil {
-		return
-	}
+	//err = os.Setenv("TF_LOG", "debug")
+	//if err != nil {
+	//	return
+	//}
 	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 	if err != nil {
 		return
@@ -196,10 +196,10 @@ func TestAccEphemeralResourceWithHeaders(t *testing.T) {
 	if err != nil {
 		return
 	}
-	err = os.Setenv("TF_LOG", "debug")
-	if err != nil {
-		return
-	}
+	//err = os.Setenv("TF_LOG", "debug")
+	//if err != nil {
+	//	return
+	//}
 	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 	if err != nil {
 		return
@@ -321,10 +321,10 @@ func TestAccEphemeralResourceWithParameters(t *testing.T) {
 	if err != nil {
 		return
 	}
-	err = os.Setenv("TF_LOG", "debug")
-	if err != nil {
-		return
-	}
+	//err = os.Setenv("TF_LOG", "debug")
+	//if err != nil {
+	//	return
+	//}
 	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 	if err != nil {
 		return
@@ -427,10 +427,10 @@ func TestAccEphemeralResourceSkipRenew(t *testing.T) {
 	if err != nil {
 		return
 	}
-	err = os.Setenv("TF_LOG", "debug")
-	if err != nil {
-		return
-	}
+	//err = os.Setenv("TF_LOG", "debug")
+	//if err != nil {
+	//	return
+	//}
 	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 	if err != nil {
 		return
@@ -527,10 +527,10 @@ func TestAccEphemeralResourceSkipClose(t *testing.T) {
 	if err != nil {
 		return
 	}
-	err = os.Setenv("TF_LOG", "debug")
-	if err != nil {
-		return
-	}
+	//err = os.Setenv("TF_LOG", "debug")
+	//if err != nil {
+	//	return
+	//}
 	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 	if err != nil {
 		return

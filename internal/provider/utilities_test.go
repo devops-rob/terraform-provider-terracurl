@@ -1,7 +1,7 @@
 package provider
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -116,7 +116,7 @@ func TestTlsClientRequests(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
 	}
 
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 	if string(body) != "success" {
 		t.Errorf("Expected body 'success', got '%s'", body)
 	}
