@@ -41,7 +41,7 @@ jobs:
       - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
         with:
           go-version-file: 'go.mod'
-          cache: true
+          cache: false
       # Temporarily download Terraform 1.8 prerelease for function documentation support.
       # When Terraform 1.8.0 final is released, this can be removed.
       - uses: hashicorp/setup-terraform@a1502cd9e758c50496cc9ac5308c4843bcd56d36 # v3.0.0
@@ -75,7 +75,7 @@ jobs:
       - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
         with:
           go-version-file: 'go.mod'
-          cache: true
+          cache: false
       - uses: hashicorp/setup-terraform@a1502cd9e758c50496cc9ac5308c4843bcd56d36 # v3.0.0
         with:
           terraform_version: ${{ matrix.terraform }}
