@@ -547,7 +547,261 @@ EOF
 
 }
 
-// TODO - Add tests for TLS calls and TLS skip verify calls. Use the same implementation on the epehemeral resource tests
+func testAccresourceCurlTls(name, url, caCertFile, certFile, keyFile, readUrl, readCaCertFile, readCertFile, readKeyFile, destroyUrl, destroyCaCertFile, destroyCertFile, destroyKeyFile string) string {
+	return fmt.Sprintf(`
+resource "terracurl_request" "tls_test" {
+  name           = "%s"
+  url            = "%s"
+  response_codes = ["200"]
+
+
+  retry_interval = 1
+  max_retry 	 	= 1
+  method         = "POST"
+  ca_cert_file     = "%s"
+  cert_file = "%s"
+  key_file  = "%s"
+
+  skip_read  	= false
+  read_url    	= "%s"
+  read_method 	= "GET"
+  read_ca_cert_file     = "%s"
+  read_cert_file = "%s"
+  read_key_file  = "%s"
+
+  read_response_codes = [
+	"200", 
+	"204"
+  ]
+
+  skip_destroy  = false
+  destroy_url    	= "%s"
+  destroy_method 	= "GET"
+  destroy_ca_cert_file     = "%s"
+  destroy_cert_file = "%s"
+  destroy_key_file  = "%s"
+
+  destroy_response_codes = [
+	"200", 
+	"204"
+  ]
+
+
+}
+`, name, url, caCertFile, certFile, keyFile, readUrl, readCaCertFile, readCertFile, readKeyFile, destroyUrl, destroyCaCertFile, destroyCertFile, destroyKeyFile)
+
+}
+
+func TestAccCurlResourceWithTLS(t *testing.T) {
+	err := os.Setenv("TF_ACC", "true")
+	if err != nil {
+		return
+	}
+	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+	if err != nil {
+		return
+	}
+	defer func() {
+		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
+		if err != nil {
+
+		}
+	}()
+	server, certFile, keyFile, err := createTLSServer()
+	if err != nil {
+		t.Fatalf("failed to create TLS test server for Create operation: %v. Cert file: %s", err, certFile)
+	}
+	fmt.Printf("Open server URL: %s\n", server.URL)
+
+	readServer, readCertFile, readKeyFile, err := createTLSServer()
+	if err != nil {
+		t.Fatalf("failed to create TLS test server for Read operation: %v. Cert file: %s", err, certFile)
+	}
+
+	destroyServer, destroyCertFile, destroyKeyFile, err := createTLSServer()
+	if err != nil {
+		t.Fatalf("failed to create TLS test server for Destroy operation: %v. Cert file: %s", err, certFile)
+	}
+
+	//fmt.Printf("CertFile: %s, KeyFile: %s\n", certFile, keyFile)
+	defer server.Close()
+	defer readServer.Close()
+	defer destroyServer.Close()
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+
+		}
+	}(certFile)
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+
+		}
+	}(keyFile)
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+
+		}
+	}(readCertFile)
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+
+		}
+	}(readKeyFile)
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+
+		}
+	}(destroyCertFile)
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+
+		}
+	}(destroyKeyFile)
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccresourceCurlTls("tls_test", server.URL, certFile, certFile, keyFile, readServer.URL, readCertFile, readCertFile, readKeyFile, destroyServer.URL, destroyCertFile, destroyCertFile, destroyKeyFile),
+				Check:  resource.TestCheckResourceAttr("terracurl_request.tls_test", "response", `{"message": "TLS test successful"}`),
+			},
+		},
+	})
+}
+
+func testAccresourceCurlTlsSkipVerify(name, url, certFile, keyFile, readUrl, readCertFile, readKeyFile, destroyUrl, destroyCertFile, destroyKeyFile string) string {
+	return fmt.Sprintf(`
+resource "terracurl_request" "tls_test" {
+  name           = "%s"
+  url            = "%s"
+  response_codes = ["200"]
+
+
+  retry_interval = 1
+  max_retry 	 	= 1
+  method         = "POST"
+  cert_file = "%s"
+  key_file  = "%s"
+  skip_tls_verify = true
+
+  skip_read  	= false
+  read_url    	= "%s"
+  read_method 	= "GET"
+  read_cert_file = "%s"
+  read_key_file  = "%s"
+  read_skip_tls_verify = true
+
+  read_response_codes = [
+	"200", 
+	"204"
+  ]
+
+  skip_destroy  = false
+  destroy_url    	= "%s"
+  destroy_method 	= "GET"
+  destroy_cert_file = "%s"
+  destroy_key_file  = "%s"
+  destroy_skip_tls_verify = true
+
+  destroy_response_codes = [
+	"200", 
+	"204"
+  ]
+
+
+}
+`, name, url, certFile, keyFile, readUrl, readCertFile, readKeyFile, destroyUrl, destroyCertFile, destroyKeyFile)
+
+}
+
+func TestAccCurlResourceWithTLSSkipVerify(t *testing.T) {
+	err := os.Setenv("TF_ACC", "true")
+	if err != nil {
+		return
+	}
+	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+	if err != nil {
+		return
+	}
+	defer func() {
+		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
+		if err != nil {
+
+		}
+	}()
+	server, certFile, keyFile, err := createTLSServer()
+	if err != nil {
+		t.Fatalf("failed to create TLS test server for Create operation: %v. Cert file: %s", err, certFile)
+	}
+	fmt.Printf("Open server URL: %s\n", server.URL)
+
+	readServer, readCertFile, readKeyFile, err := createTLSServer()
+	if err != nil {
+		t.Fatalf("failed to create TLS test server for Read operation: %v. Cert file: %s", err, certFile)
+	}
+
+	destroyServer, destroyCertFile, destroyKeyFile, err := createTLSServer()
+	if err != nil {
+		t.Fatalf("failed to create TLS test server for Destroy operation: %v. Cert file: %s", err, certFile)
+	}
+
+	//fmt.Printf("CertFile: %s, KeyFile: %s\n", certFile, keyFile)
+	defer server.Close()
+	defer readServer.Close()
+	defer destroyServer.Close()
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+
+		}
+	}(certFile)
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+
+		}
+	}(keyFile)
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+
+		}
+	}(readCertFile)
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+
+		}
+	}(readKeyFile)
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+
+		}
+	}(destroyCertFile)
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+
+		}
+	}(destroyKeyFile)
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccresourceCurlTls("tls_test", server.URL, certFile, certFile, keyFile, readServer.URL, readCertFile, readCertFile, readKeyFile, destroyServer.URL, destroyCertFile, destroyCertFile, destroyKeyFile),
+				Check:  resource.TestCheckResourceAttr("terracurl_request.tls_test", "response", `{"message": "TLS test successful"}`),
+			},
+		},
+	})
+}
 
 func testMockEndpointCount(endpoint string, expected int) resource.TestCheckFunc {
 	return func(s *terraform.State) error {

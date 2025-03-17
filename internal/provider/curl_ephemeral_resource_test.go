@@ -763,7 +763,7 @@ ephemeral "terracurl_request" "ephems" {
   renew_skip_tls_verify = true
 
 
-  skip_close            = false
+  skip_close            = true
   close_url             = "%s"
   close_response_codes  = ["200"]
   close_method          = "DELETE"

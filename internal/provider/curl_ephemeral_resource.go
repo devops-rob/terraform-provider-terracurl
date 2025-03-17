@@ -644,23 +644,31 @@ func (e *EphemeralCurlResource) Renew(ctx context.Context, req ephemeral.RenewRe
 	}
 
 	var renewResponseCodes []string
-	if rawList, exists := privateMap["RenewResponseCodes"]; exists {
+
+	// Check if the key exists AND is not nil before asserting type
+	if rawList, exists := privateMap["RenewResponseCodes"]; exists && rawList != nil {
 		switch v := rawList.(type) {
 		case []interface{}:
 			for _, item := range v {
 				if strVal, ok := item.(string); ok {
 					renewResponseCodes = append(renewResponseCodes, strVal)
+				} else {
+					resp.Diagnostics.AddError("Type Assertion Error", "RenewResponseCodes contains non-string elements")
+					return
 				}
 			}
 		case []string:
 			renewResponseCodes = v
 		default:
-			resp.Diagnostics.AddError("Type Assertion Error", "RenewResponseCodes is not a valid list format")
+			resp.Diagnostics.AddError(
+				"Type Assertion Error",
+				fmt.Sprintf("RenewResponseCodes has unexpected type: %T", rawList),
+			)
 			return
 		}
 	} else {
-		resp.Diagnostics.AddError("Missing Data", "RenewResponseCodes is missing from private data")
-		return
+		// If attribute is missing, default to an empty slice without throwing an error
+		renewResponseCodes = []string{}
 	}
 
 	// Convert to Terraform ListValue
@@ -812,23 +820,31 @@ func (e *EphemeralCurlResource) Renew(ctx context.Context, req ephemeral.RenewRe
 	}
 
 	var closeResponseCodes []string
-	if rawList, exists := privateMap["CloseResponseCodes"]; exists {
+
+	// Check if the key exists AND is not nil before asserting type
+	if rawList, exists := privateMap["CloseResponseCodes"]; exists && rawList != nil {
 		switch v := rawList.(type) {
 		case []interface{}:
 			for _, item := range v {
 				if strVal, ok := item.(string); ok {
 					closeResponseCodes = append(closeResponseCodes, strVal)
+				} else {
+					resp.Diagnostics.AddError("Type Assertion Error", "CloseResponseCodes contains non-string elements")
+					return
 				}
 			}
 		case []string:
 			closeResponseCodes = v
 		default:
-			resp.Diagnostics.AddError("Type Assertion Error", "CloseResponseCodes is not a valid list format")
+			resp.Diagnostics.AddError(
+				"Type Assertion Error",
+				fmt.Sprintf("CloseResponseCodes has unexpected type: %T", rawList),
+			)
 			return
 		}
 	} else {
-		resp.Diagnostics.AddError("Missing Data", "CloseResponseCodes is missing from private data")
-		return
+		// If attribute is missing, default to an empty slice without throwing an error
+		closeResponseCodes = []string{}
 	}
 
 	// Convert to Terraform ListValue
@@ -1195,23 +1211,31 @@ func (e *EphemeralCurlResource) Close(ctx context.Context, req ephemeral.CloseRe
 	}
 
 	var closeResponseCodes []string
-	if rawList, exists := privateMap["CloseResponseCodes"]; exists {
+
+	// Check if the key exists AND is not nil before asserting type
+	if rawList, exists := privateMap["CloseResponseCodes"]; exists && rawList != nil {
 		switch v := rawList.(type) {
 		case []interface{}:
 			for _, item := range v {
 				if strVal, ok := item.(string); ok {
 					closeResponseCodes = append(closeResponseCodes, strVal)
+				} else {
+					resp.Diagnostics.AddError("Type Assertion Error", "CloseResponseCodes contains non-string elements")
+					return
 				}
 			}
 		case []string:
 			closeResponseCodes = v
 		default:
-			resp.Diagnostics.AddError("Type Assertion Error", "CloseResponseCodes is not a valid list format")
+			resp.Diagnostics.AddError(
+				"Type Assertion Error",
+				fmt.Sprintf("CloseResponseCodes has unexpected type: %T", rawList),
+			)
 			return
 		}
 	} else {
-		resp.Diagnostics.AddError("Missing Data", "CloseResponseCodes is missing from private data")
-		return
+		// If attribute is missing, default to an empty slice without throwing an error
+		closeResponseCodes = []string{}
 	}
 
 	// Convert to Terraform ListValue
