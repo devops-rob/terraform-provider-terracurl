@@ -21,7 +21,7 @@ var _ datasource.DataSource = &CurlDataSource{}
 type ThingDataSource struct{}
 
 type CurlDataSource struct {
-	client *http.Client
+	//client *http.Client
 }
 
 func NewCurlDataSource() datasource.DataSource {
@@ -177,9 +177,7 @@ func (d *CurlDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		if err != nil {
 			resp.Diagnostics.AddError("TLS Client Creation Failed", err.Error())
 			return
-		}
-
-	} else {
+		} else {
 		// Use default non-TLS client.
 		client = &http.Client{
 			Timeout: 30 * time.Second,

@@ -23,7 +23,7 @@ var _ ephemeral.EphemeralResourceWithRenew = (*EphemeralCurlResource)(nil)
 var _ ephemeral.EphemeralResourceWithClose = (*EphemeralCurlResource)(nil)
 
 type EphemeralCurlResource struct {
-	client *http.Client
+	//client *http.Client
 }
 
 func (e *EphemeralCurlResource) Metadata(ctx context.Context, req ephemeral.MetadataRequest, resp *ephemeral.MetadataResponse) {
@@ -408,9 +408,7 @@ func (e *EphemeralCurlResource) Open(ctx context.Context, req ephemeral.OpenRequ
 		if err != nil {
 			resp.Diagnostics.AddError("TLS Client Creation Failed", err.Error())
 			return
-		}
-
-	} else {
+		} else {
 		// Use default non-TLS client.
 		client = &http.Client{
 			Timeout: 30 * time.Second,
@@ -1063,9 +1061,7 @@ func (e *EphemeralCurlResource) Renew(ctx context.Context, req ephemeral.RenewRe
 		if err != nil {
 			resp.Diagnostics.AddError("TLS Client Creation Failed", err.Error())
 			return
-		}
-
-	} else {
+		} else {
 		// Use default non-TLS client
 		tflog.Debug(ctx, "using default client for renew call")
 		client = &http.Client{

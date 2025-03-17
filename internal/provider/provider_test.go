@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/hex"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -224,19 +223,4 @@ func testAccPreCheck(t *testing.T) {
 	// You can add code here to run prior to any test case execution, for example assertions
 	// about the appropriate environment variables being set are common to see in a pre-check
 	// function.
-}
-
-func testAccCheckRequestDestroy(s *terraform.State) error {
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "terracurl_request" {
-			continue
-		}
-	}
-	return nil
-}
-
-// Helper function to identify "not found" errors.
-func isNotFoundError(err error) bool {
-	// Replace with the actual check for your API.
-	return err != nil && err.Error() == "resource not found"
 }

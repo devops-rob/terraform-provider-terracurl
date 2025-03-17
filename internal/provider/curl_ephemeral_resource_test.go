@@ -47,24 +47,8 @@ resource "terracurl_request" "test" {
 }`
 
 func TestAccEphemeralResource(t *testing.T) {
-	err := os.Setenv("TF_ACC", "true")
-	if err != nil {
-		return
-	}
-	//err = os.Setenv("TF_LOG", "debug")
-	//if err != nil {
-	//	return
-	//}
-	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-	if err != nil {
-		return
-	}
-	defer func() {
-		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
-		if err != nil {
-
-		}
-	}()
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 
 	var firstCall time.Time
 	var callCount int
@@ -109,8 +93,6 @@ func TestAccEphemeralResource(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testMockEndpointRegister("POST https://example.com/open"),
 					testMockEndpointRegister("GET https://example.com/renew"),
-					//testMockEndpointCount("GET https://example.com/renew", 1),
-					//testMockEndpointCount("DELETE https://example.com/close", 1),
 
 					func(s *terraform.State) error {
 						if callCount != 2 {
@@ -129,7 +111,6 @@ func TestAccEphemeralResource(t *testing.T) {
 			{
 				RefreshState: true,
 				Check: resource.ComposeTestCheckFunc(
-					//testMockEndpointRegister("GET https://example.com/renew"),
 					testMockEndpointRegister("DELETE https://example.com/close"),
 				),
 			},
@@ -192,26 +173,9 @@ resource "terracurl_request" "test" {
 `
 
 func TestAccEphemeralResourceWithHeaders(t *testing.T) {
-	err := os.Setenv("TF_ACC", "true")
-	if err != nil {
-		return
-	}
-	//err = os.Setenv("TF_LOG", "debug")
-	//if err != nil {
-	//	return
-	//}
-	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-	if err != nil {
-		return
-	}
-	defer func() {
-		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
-		if err != nil {
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 
-		}
-	}()
-
-	//var firstCall time.Time
 	var callCount int
 
 	httpmock.Activate()
@@ -317,26 +281,9 @@ resource "terracurl_request" "test" {
 }`
 
 func TestAccEphemeralResourceWithParameters(t *testing.T) {
-	err := os.Setenv("TF_ACC", "true")
-	if err != nil {
-		return
-	}
-	//err = os.Setenv("TF_LOG", "debug")
-	//if err != nil {
-	//	return
-	//}
-	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-	if err != nil {
-		return
-	}
-	defer func() {
-		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
-		if err != nil {
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 
-		}
-	}()
-
-	//var firstCall time.Time
 	var callCount int
 
 	httpmock.Activate()
@@ -423,26 +370,8 @@ resource "terracurl_request" "test" {
 }`
 
 func TestAccEphemeralResourceSkipRenew(t *testing.T) {
-	err := os.Setenv("TF_ACC", "true")
-	if err != nil {
-		return
-	}
-	//err = os.Setenv("TF_LOG", "debug")
-	//if err != nil {
-	//	return
-	//}
-	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-	if err != nil {
-		return
-	}
-	defer func() {
-		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
-		if err != nil {
-
-		}
-	}()
-
-	//var firstCall time.Time
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 	var callCount int
 
 	httpmock.Activate()
@@ -523,26 +452,9 @@ resource "terracurl_request" "test" {
 }`
 
 func TestAccEphemeralResourceSkipClose(t *testing.T) {
-	err := os.Setenv("TF_ACC", "true")
-	if err != nil {
-		return
-	}
-	//err = os.Setenv("TF_LOG", "debug")
-	//if err != nil {
-	//	return
-	//}
-	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-	if err != nil {
-		return
-	}
-	defer func() {
-		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
-		if err != nil {
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 
-		}
-	}()
-
-	//var firstCall time.Time
 	var callCount int
 
 	httpmock.Activate()
@@ -644,20 +556,9 @@ resource "terracurl_request" "test" {
 }
 
 func TestAccCurlEmphemeralResourceWithTLS(t *testing.T) {
-	err := os.Setenv("TF_ACC", "true")
-	if err != nil {
-		return
-	}
-	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-	if err != nil {
-		return
-	}
-	defer func() {
-		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
-		if err != nil {
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 
-		}
-	}()
 	server, certFile, keyFile, err := createTLSServer()
 	if err != nil {
 		t.Fatalf("failed to create TLS test server for Open(): %v. Cert file: %s", err, certFile)
@@ -676,7 +577,6 @@ func TestAccCurlEmphemeralResourceWithTLS(t *testing.T) {
 	}
 	fmt.Printf("Close server URL: %s\n", closeServer.URL)
 
-	//fmt.Printf("CertFile: %s, KeyFile: %s\n", certFile, keyFile)
 	defer server.Close()
 	defer renewServer.Close()
 	defer closeServer.Close()
@@ -792,20 +692,9 @@ resource "terracurl_request" "test" {
 }
 
 func TestAccCurlEmphemeralResourceWithTLSSkipVerify(t *testing.T) {
-	err := os.Setenv("TF_ACC", "true")
-	if err != nil {
-		return
-	}
-	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-	if err != nil {
-		return
-	}
-	defer func() {
-		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
-		if err != nil {
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 
-		}
-	}()
 	server, certFile, keyFile, err := createTLSServer()
 	if err != nil {
 		t.Fatalf("failed to create TLS test server for Open(): %v. Cert file: %s", err, certFile)
@@ -824,7 +713,6 @@ func TestAccCurlEmphemeralResourceWithTLSSkipVerify(t *testing.T) {
 	}
 	fmt.Printf("Close server URL: %s\n", closeServer.URL)
 
-	//fmt.Printf("CertFile: %s, KeyFile: %s\n", certFile, keyFile)
 	defer server.Close()
 	defer renewServer.Close()
 	defer closeServer.Close()

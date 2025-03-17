@@ -21,6 +21,7 @@ func sanitizeResponse(response string, fieldsToIgnore []string) (string, error) 
 	var jsonObj map[string]interface{}
 	if err := json.Unmarshal([]byte(response), &jsonObj); err != nil {
 		// Return the original response if it's not a JSON object.
+		fmt.Println("Warning: Response is not a JSON object:", err)
 		return response, nil
 	}
 

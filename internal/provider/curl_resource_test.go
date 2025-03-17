@@ -13,20 +13,8 @@ import (
 )
 
 func TestAccresourceCurl(t *testing.T) {
-	err := os.Setenv("TF_ACC", "true")
-	if err != nil {
-		return
-	}
-	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-	if err != nil {
-		return
-	}
-	defer func() {
-		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
-		if err != nil {
-
-		}
-	}()
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 	httpmock.RegisterResponder(
@@ -117,20 +105,9 @@ EOF
 }
 
 func TestAccresourceCurlDestroy(t *testing.T) {
-	err := os.Setenv("TF_ACC", "true")
-	if err != nil {
-		return
-	}
-	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-	if err != nil {
-		return
-	}
-	defer func() {
-		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
-		if err != nil {
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 
-		}
-	}()
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 	httpmock.RegisterResponder(
@@ -210,20 +187,9 @@ EOF
 }
 
 func TestAccresourceCurlSkipDestroy(t *testing.T) {
-	err := os.Setenv("TF_ACC", "true")
-	if err != nil {
-		return
-	}
-	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-	if err != nil {
-		return
-	}
-	defer func() {
-		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
-		if err != nil {
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 
-		}
-	}()
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 	httpmock.RegisterResponder(
@@ -300,20 +266,8 @@ EOF
 }
 
 func TestAccCurlresourceRetries(t *testing.T) {
-	err := os.Setenv("TF_ACC", "true")
-	if err != nil {
-		return
-	}
-	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-	if err != nil {
-		return
-	}
-	defer func() {
-		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
-		if err != nil {
-
-		}
-	}()
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
@@ -404,20 +358,9 @@ EOF
 }
 
 func TestAccresourceCurlSkipRead(t *testing.T) {
-	err := os.Setenv("TF_ACC", "true")
-	if err != nil {
-		return
-	}
-	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-	if err != nil {
-		return
-	}
-	defer func() {
-		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
-		if err != nil {
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 
-		}
-	}()
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 	httpmock.RegisterResponder(
@@ -476,20 +419,9 @@ EOF
 }
 
 func TestAccresourceCurlRead(t *testing.T) {
-	err := os.Setenv("TF_ACC", "true")
-	if err != nil {
-		return
-	}
-	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-	if err != nil {
-		return
-	}
-	defer func() {
-		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
-		if err != nil {
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 
-		}
-	}()
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 	httpmock.RegisterResponder(
@@ -593,20 +525,9 @@ resource "terracurl_request" "tls_test" {
 }
 
 func TestAccCurlResourceWithTLS(t *testing.T) {
-	err := os.Setenv("TF_ACC", "true")
-	if err != nil {
-		return
-	}
-	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-	if err != nil {
-		return
-	}
-	defer func() {
-		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
-		if err != nil {
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 
-		}
-	}()
 	server, certFile, keyFile, err := createTLSServer()
 	if err != nil {
 		t.Fatalf("failed to create TLS test server for Create operation: %v. Cert file: %s", err, certFile)

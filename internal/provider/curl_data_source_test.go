@@ -16,20 +16,8 @@ import (
 var RequestBody = `{"example": "request_body"}`
 
 func TestAccCurlDataSourceBasic(t *testing.T) {
-	err := os.Setenv("TF_ACC", "true")
-	if err != nil {
-		return
-	}
-	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-	if err != nil {
-		return
-	}
-	defer func() {
-		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
-		if err != nil {
-
-		}
-	}()
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 
 	responseBody := `{"response": "test_response"}`
 	httpmock.Activate()
@@ -92,20 +80,8 @@ EOF
 }
 
 func TestAccCurlDataSourceRetries(t *testing.T) {
-	err := os.Setenv("TF_ACC", "true")
-	if err != nil {
-		return
-	}
-	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-	if err != nil {
-		return
-	}
-	defer func() {
-		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
-		if err != nil {
-
-		}
-	}()
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
@@ -173,20 +149,8 @@ EOF
 }
 
 func TestAccdataSourceCurlRequestTimeout(t *testing.T) {
-	err := os.Setenv("TF_ACC", "true")
-	if err != nil {
-		return
-	}
-	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-	if err != nil {
-		return
-	}
-	defer func() {
-		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
-		if err != nil {
-
-		}
-	}()
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 
 	rName := "devopsrob"
 	json := `{"name": "` + rName + `"}`
@@ -263,20 +227,8 @@ EOF
 }
 
 func TestAccCurlDataSourceTLS(t *testing.T) {
-	err := os.Setenv("TF_ACC", "true")
-	if err != nil {
-		return
-	}
-	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-	if err != nil {
-		return
-	}
-	defer func() {
-		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
-		if err != nil {
-
-		}
-	}()
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 	server, certFile, keyFile, err := createTLSServer()
 	if err != nil {
 		t.Fatalf("failed to create TLS test server: %v. Cert file: %s", err, certFile)
@@ -327,20 +279,8 @@ data "terracurl_request" "tls_test" {
 }
 
 func TestAccCurlDataSourceTLSSkipVerify(t *testing.T) {
-	err := os.Setenv("TF_ACC", "true")
-	if err != nil {
-		return
-	}
-	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-	if err != nil {
-		return
-	}
-	defer func() {
-		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
-		if err != nil {
-
-		}
-	}()
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 	server, certFile, keyFile, err := createTLSServer()
 	if err != nil {
 		t.Fatalf("failed to create TLS test server: %v. Cert file: %s", err, certFile)
