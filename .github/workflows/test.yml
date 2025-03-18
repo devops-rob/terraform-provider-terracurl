@@ -29,6 +29,9 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: false
+      - name: Fix Git Safe Directory Issue
+        run: |
+          git config --global --add safe.directory /__w/terraform-provider-terracurl/terraform-provider-terracurl
       - name: Clean Go Module Cache
         run: |
           go clean -modcache
