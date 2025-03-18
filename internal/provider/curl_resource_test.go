@@ -551,37 +551,37 @@ func TestAccCurlResourceWithTLS(t *testing.T) {
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(certFile)
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(keyFile)
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(readCertFile)
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(readKeyFile)
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(destroyCertFile)
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(destroyKeyFile)
 	resource.Test(t, resource.TestCase{
@@ -642,20 +642,9 @@ resource "terracurl_request" "tls_test" {
 }
 
 func TestAccCurlResourceWithTLSSkipVerify(t *testing.T) {
-	err := os.Setenv("TF_ACC", "true")
-	if err != nil {
-		return
-	}
-	err = os.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-	if err != nil {
-		return
-	}
-	defer func() {
-		err := os.Unsetenv("USE_DEFAULT_CLIENT_FOR_TESTS")
-		if err != nil {
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
 
-		}
-	}()
 	server, certFile, keyFile, err := createTLSServer()
 	if err != nil {
 		t.Fatalf("failed to create TLS test server for Create operation: %v. Cert file: %s", err, certFile)
@@ -678,37 +667,37 @@ func TestAccCurlResourceWithTLSSkipVerify(t *testing.T) {
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(certFile)
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(keyFile)
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(readCertFile)
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(readKeyFile)
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(destroyCertFile)
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(destroyKeyFile)
 	resource.Test(t, resource.TestCase{

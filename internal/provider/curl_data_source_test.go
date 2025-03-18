@@ -238,13 +238,13 @@ func TestAccCurlDataSourceTLS(t *testing.T) {
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(certFile)
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(keyFile)
 
@@ -290,13 +290,13 @@ func TestAccCurlDataSourceTLSSkipVerify(t *testing.T) {
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(certFile)
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(keyFile)
 

@@ -583,37 +583,37 @@ func TestAccCurlEmphemeralResourceWithTLS(t *testing.T) {
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(certFile)
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(keyFile)
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(renewCertFile)
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(renewKeyFile)
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(closeCertFile)
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(closeKeyFile)
 	var callCount int
@@ -719,37 +719,37 @@ func TestAccCurlEmphemeralResourceWithTLSSkipVerify(t *testing.T) {
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(certFile)
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(keyFile)
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(renewCertFile)
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(renewKeyFile)
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(closeCertFile)
 	defer func(name string) {
 		err := os.Remove(name)
 		if err != nil {
-
+			fmt.Println(err)
 		}
 	}(closeKeyFile)
 	var callCount int
