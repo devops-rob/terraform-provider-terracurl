@@ -157,6 +157,7 @@ func (d *CurlDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	var err error
 
 	if useTLS {
+
 		// Build TLS Config.
 		tlsConfig := &TlsConfig{
 			CertFile:        data.CertFile.ValueString(),
