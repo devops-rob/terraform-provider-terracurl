@@ -7,10 +7,13 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/hex"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
@@ -223,4 +226,44 @@ func testAccPreCheck(t *testing.T) {
 	// You can add code here to run prior to any test case execution, for example assertions
 	// about the appropriate environment variables being set are common to see in a pre-check
 	// function.
+}
+
+func getTerraformVersion() (string, error) {
+	cmd := exec.Command("terraform", "version")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	lines := strings.Split(string(output), "\n")
+	if len(lines) > 0 {
+		versionParts := strings.Fields(lines[0])
+		if len(versionParts) > 1 {
+			return strings.TrimPrefix(versionParts[1], "v"), nil
+		}
+	}
+
+	return "", fmt.Errorf("could not determine Terraform version")
+}
+
+// Run this function inside tests that should be skipped for Terraform <1.10
+func skipIfTerraformIsLegacy(t *testing.T) {
+	tfVersion, err := getTerraformVersion()
+	if err != nil {
+		t.Fatalf("Failed to get Terraform version: %s", err)
+	}
+
+	// Check if Terraform is <1.10
+	if strings.HasPrefix(tfVersion, "1.0.") ||
+		strings.HasPrefix(tfVersion, "1.1.") ||
+		strings.HasPrefix(tfVersion, "1.2.") ||
+		strings.HasPrefix(tfVersion, "1.3.") ||
+		strings.HasPrefix(tfVersion, "1.4.") ||
+		strings.HasPrefix(tfVersion, "1.5.") ||
+		strings.HasPrefix(tfVersion, "1.6.") ||
+		strings.HasPrefix(tfVersion, "1.7.") ||
+		strings.HasPrefix(tfVersion, "1.8.") ||
+		strings.HasPrefix(tfVersion, "1.9.") {
+		t.Skip("Skipping test: Terraform version <1.10 detected")
+	}
 }

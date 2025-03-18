@@ -49,6 +49,7 @@ resource "terracurl_request" "test" {
 func TestAccEphemeralResource(t *testing.T) {
 	t.Setenv("TF_ACC", "true")
 	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+	skipIfTerraformIsLegacy(t)
 
 	var firstCall time.Time
 	var callCount int
@@ -175,7 +176,7 @@ resource "terracurl_request" "test" {
 func TestAccEphemeralResourceWithHeaders(t *testing.T) {
 	t.Setenv("TF_ACC", "true")
 	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-
+	skipIfTerraformIsLegacy(t)
 	var callCount int
 
 	httpmock.Activate()
@@ -283,7 +284,7 @@ resource "terracurl_request" "test" {
 func TestAccEphemeralResourceWithParameters(t *testing.T) {
 	t.Setenv("TF_ACC", "true")
 	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-
+	skipIfTerraformIsLegacy(t)
 	var callCount int
 
 	httpmock.Activate()
@@ -372,6 +373,7 @@ resource "terracurl_request" "test" {
 func TestAccEphemeralResourceSkipRenew(t *testing.T) {
 	t.Setenv("TF_ACC", "true")
 	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+	skipIfTerraformIsLegacy(t)
 	var callCount int
 
 	httpmock.Activate()
@@ -454,7 +456,7 @@ resource "terracurl_request" "test" {
 func TestAccEphemeralResourceSkipClose(t *testing.T) {
 	t.Setenv("TF_ACC", "true")
 	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-
+	skipIfTerraformIsLegacy(t)
 	var callCount int
 
 	httpmock.Activate()
@@ -558,7 +560,7 @@ resource "terracurl_request" "test" {
 func TestAccCurlEmphemeralResourceWithTLS(t *testing.T) {
 	t.Setenv("TF_ACC", "true")
 	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-
+	skipIfTerraformIsLegacy(t)
 	server, certFile, keyFile, err := createTLSServer()
 	if err != nil {
 		t.Fatalf("failed to create TLS test server for Open(): %v. Cert file: %s", err, certFile)
@@ -694,7 +696,7 @@ resource "terracurl_request" "test" {
 func TestAccCurlEmphemeralResourceWithTLSSkipVerify(t *testing.T) {
 	t.Setenv("TF_ACC", "true")
 	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
-
+	skipIfTerraformIsLegacy(t)
 	server, certFile, keyFile, err := createTLSServer()
 	if err != nil {
 		t.Fatalf("failed to create TLS test server for Open(): %v. Cert file: %s", err, certFile)
