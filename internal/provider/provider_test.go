@@ -28,20 +28,6 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 	"terracurl": providerserver.NewProtocol6WithError(New("test")()),
 }
 
-//type mockClient struct {
-//	mock.Mock
-//}
-
-//func (m *mockClient) Do(r *http.Request) (*http.Response, error) {
-//	args := m.Mock.Called(r)
-//
-//	if resp, ok := args.Get(0).(*http.Response); ok {
-//		return resp, args.Error(1)
-//	}
-//
-//	return nil, args.Error(1)
-//}
-
 const localCert = `-----BEGIN CERTIFICATE-----
 MIICnDCCAkOgAwIBAgIRAJ7vRKfNUfgTzPf3A2usN5MwCgYIKoZIzj0EAwIwgbkx
 CzAJBgNVBAYTAlVTMQswCQYDVQQIEwJDQTEWMBQGA1UEBxMNU2FuIEZyYW5jaXNj
@@ -65,31 +51,6 @@ MHcCAQEEIHa08Nf/lf7KXSMcRwnhNOI5rpJsykbo4ZGImsZndeHYoAoGCCqGSM49
 AwEHoUQDQgAEjLj2Ay/hhLhJ1cC5Rp7/bkucDS+MrS8Te7HpXmQJAQt4DsMWbP9K
 J9dc0LcE8rTwitkoLiTtjMl/y9J+I6jqHw==
 -----END EC PRIVATE KEY-----`
-
-//const localCaCert = `-----BEGIN CERTIFICATE-----
-//MIIC7zCCApSgAwIBAgIRAIbF3DbRPw3xEog94qQ5oZUwCgYIKoZIzj0EAwIwgbkx
-//CzAJBgNVBAYTAlVTMQswCQYDVQQIEwJDQTEWMBQGA1UEBxMNU2FuIEZyYW5jaXNj
-//bzEaMBgGA1UECRMRMTAxIFNlY29uZCBTdHJlZXQxDjAMBgNVBBETBTk0MTA1MRcw
-//FQYDVQQKEw5IYXNoaUNvcnAgSW5jLjFAMD4GA1UEAxM3Q29uc3VsIEFnZW50IENB
-//IDE3OTE0MzkwMDM4OTUwMjI2MjM2Njc1OTk3NzcwNTA5NjcxNjY5MzAeFw0yNTAy
-//MjcxMzMxMDJaFw0zMDAyMjYxMzMxMDJaMIG5MQswCQYDVQQGEwJVUzELMAkGA1UE
-//CBMCQ0ExFjAUBgNVBAcTDVNhbiBGcmFuY2lzY28xGjAYBgNVBAkTETEwMSBTZWNv
-//bmQgU3RyZWV0MQ4wDAYDVQQREwU5NDEwNTEXMBUGA1UEChMOSGFzaGlDb3JwIElu
-//Yy4xQDA+BgNVBAMTN0NvbnN1bCBBZ2VudCBDQSAxNzkxNDM5MDAzODk1MDIyNjIz
-//NjY3NTk5Nzc3MDUwOTY3MTY2OTMwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQ/
-//UUzw4oVoTwlfz3LyOcEwjkgnDTkRAswgg3uX8uMHnXuAAowtMWZn1YoZBtSRzkk8
-//XwO/3Chhwicg6P1lww97o3sweTAOBgNVHQ8BAf8EBAMCAYYwDwYDVR0TAQH/BAUw
-//AwEB/zApBgNVHQ4EIgQgoQHGYd5N8AO12lsXVLDDfQlciWetioTKD7Q8NtlbrJcw
-//KwYDVR0jBCQwIoAgoQHGYd5N8AO12lsXVLDDfQlciWetioTKD7Q8NtlbrJcwCgYI
-//KoZIzj0EAwIDSQAwRgIhAKryzgZzELmfEMhP+vMVldV1qZg20WW+WQvlHCXrbB5b
-//AiEAuQ3n4H00QArzgaj+57yW7KCJu1Pi1WBXsfRStDUte9E=
-//-----END CERTIFICATE-----`
-
-//const localCaKey = `-----BEGIN EC PRIVATE KEY-----
-//MHcCAQEEIMn8/saUQ0mFuujfsN/wWW7scKbzoPaN0O4aaEkLL5e+oAoGCCqGSM49
-//AwEHoUQDQgAEP1FM8OKFaE8JX89y8jnBMI5IJw05EQLMIIN7l/LjB517gAKMLTFm
-//Z9WKGQbUkc5JPF8Dv9woYcInIOj9ZcMPew==
-//-----END EC PRIVATE KEY-----`
 
 func createTLSServer() (*httptest.Server, string, string, error) {
 	log.Println("createTLSServer() called...")
