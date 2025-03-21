@@ -164,7 +164,6 @@ func (e *EphemeralCurlResource) Schema(ctx context.Context, req ephemeral.Schema
 			},
 			"retry_interval": schema.Int64Attribute{
 				Optional:            true,
-				Computed:            true,
 				MarkdownDescription: "Interval between each attempt",
 			},
 			"max_retry": schema.Int64Attribute{
@@ -192,7 +191,7 @@ func (e *EphemeralCurlResource) Schema(ctx context.Context, req ephemeral.Schema
 			"skip_renew": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Set to true to skip renewing ephemeral resources",
+				MarkdownDescription: "Set to true to skip renewing ephemeral resources. Default value is `true`",
 			},
 
 			"renew_interval": schema.Int64Attribute{
@@ -248,7 +247,6 @@ func (e *EphemeralCurlResource) Schema(ctx context.Context, req ephemeral.Schema
 			},
 			"renew_retry_interval": schema.Int64Attribute{
 				Optional:            true,
-				Computed:            true,
 				MarkdownDescription: "Interval between each attempt",
 			},
 			"renew_max_retry": schema.Int64Attribute{
@@ -272,7 +270,7 @@ func (e *EphemeralCurlResource) Schema(ctx context.Context, req ephemeral.Schema
 			"skip_close": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Set to true if there are no api calls to make to clean up the ephemeral resource on the target platform.",
+				MarkdownDescription: "Set to true if there are no api calls to make to clean up the ephemeral resource on the target platform. Default value is set to `true`.",
 			},
 
 			"close_url": schema.StringAttribute{
@@ -323,7 +321,6 @@ func (e *EphemeralCurlResource) Schema(ctx context.Context, req ephemeral.Schema
 			},
 			"close_retry_interval": schema.Int64Attribute{
 				Optional:            true,
-				Computed:            true,
 				MarkdownDescription: "Interval between each attempt",
 			},
 			"close_max_retry": schema.Int64Attribute{
@@ -444,6 +441,8 @@ func (e *EphemeralCurlResource) Open(ctx context.Context, req ephemeral.OpenRequ
 		request.URL.RawQuery = params.Encode()
 	}
 	data.RequestUrlString = types.StringValue(request.URL.String())
+
+	tflog.Debug(ctx, fmt.Sprintf("Epehemeral Rescource Open API Call: \nURL: %s\nHeaders: %s\nMethod: %s\nRequest Body: %s\n", request.URL.String(), request.Header, request.Method, request.Body))
 
 	timeout := 10 * time.Second
 	if !data.Timeout.IsNull() {
@@ -888,7 +887,6 @@ func (e *EphemeralCurlResource) Renew(ctx context.Context, req ephemeral.RenewRe
 
 	closeParameters := make(map[string]string) // Default to empty map
 
-	tflog.Debug(ctx, fmt.Sprintf("raw close parameters: %v\n", privateMap["CloseRequestParameters"]))
 	if rawCloseParameters, exists := privateMap["CloseRequestParameters"]; exists && rawCloseParameters != nil {
 		if rawParameters, ok := rawCloseParameters.(map[string]interface{}); ok {
 			for key, value := range rawParameters {
@@ -1103,6 +1101,7 @@ func (e *EphemeralCurlResource) Renew(ctx context.Context, req ephemeral.RenewRe
 		tflog.Debug(ctx, fmt.Sprintf("Renew URL string: %s\n", request.URL.String()))
 	}
 	privateData.RenewRequestUrlString = types.StringValue(request.URL.String())
+	tflog.Debug(ctx, fmt.Sprintf("Data Source API Call: \nURL: %s\nHeaders: %s\nMethod: %s\nRequest Body: %s\n", request.URL.String(), request.Header, request.Method, request.Body))
 
 	timeout := 10 * time.Second
 	if !privateData.RenewTimeout.IsNull() {
@@ -1385,12 +1384,6 @@ func (e *EphemeralCurlResource) Close(ctx context.Context, req ephemeral.CloseRe
 		CloseResponse:          types.StringValue(closeResponse),
 	}
 
-	//tflog.Debug(ctx, fmt.Sprintf("Unmarshaled privateData: %+v", privateData))
-	//tflog.Debug(ctx, fmt.Sprintf("Private bytes: %v", privateBytes))
-	//tflog.Debug(ctx, fmt.Sprintf("Private data: %v", privateData.Name))
-	//tflog.Debug(ctx, fmt.Sprintf("Private data skip_close value: %v", privateData.SkipClose.ValueBool()))
-	//tflog.Debug(ctx, fmt.Sprintf("Method: %s \n Url: %s \n", privateData.CloseMethod.ValueString(), privateData.CloseUrl.ValueString()))
-
 	// Perform external call to close/clean up data
 
 	if privateData.SkipClose.IsUnknown() {
@@ -1470,7 +1463,7 @@ func (e *EphemeralCurlResource) Close(ctx context.Context, req ephemeral.CloseRe
 	retryInterval := time.Duration(privateData.CloseRetryInterval.ValueInt64()) * time.Second
 	maxRetry := int(privateData.CloseMaxRetry.ValueInt64())
 
-	tflog.Debug(ctx, "Making Close() request", map[string]interface{}{
+	tflog.Debug(ctx, "Ephemeral resource close API request", map[string]interface{}{
 		"url":     request.URL.String(),
 		"method":  request.Method,
 		"headers": request.Header,
@@ -1573,6 +1566,18 @@ func (e EphemeralCurlResource) ConfigValidators(ctx context.Context) []ephemeral
 		ephemeralvalidator.Conflicting(
 			path.MatchRoot("close_ca_cert_file"),
 			path.MatchRoot("close_ca_cert_directory"),
+		),
+		ephemeralvalidator.RequiredTogether(
+			path.MatchRoot("retry_interval"),
+			path.MatchRoot("max_retry"),
+		),
+		ephemeralvalidator.RequiredTogether(
+			path.MatchRoot("renew_retry_interval"),
+			path.MatchRoot("renew_max_retry"),
+		),
+		ephemeralvalidator.RequiredTogether(
+			path.MatchRoot("close_retry_interval"),
+			path.MatchRoot("close_max_retry"),
 		),
 	}
 }

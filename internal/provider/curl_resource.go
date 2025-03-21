@@ -519,6 +519,7 @@ func (r *CurlResource) Create(ctx context.Context, req resource.CreateRequest, r
 	}
 	data.RequestUrlString = types.StringValue(request.URL.String())
 
+	tflog.Debug(ctx, fmt.Sprintf("Resource create API Call: \nURL: %s\nHeaders: %s\nMethod: %s\nRequest Body: %s\n", request.URL.String(), request.Header, request.Method, data.RequestBody.ValueString()))
 	timeout := 10 * time.Second
 	if !data.Timeout.IsNull() {
 		timeout = time.Duration(data.Timeout.ValueInt64()) * time.Second
@@ -670,11 +671,7 @@ func (r *CurlResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 
 	// ======= Execute Request =======
-	tflog.Debug(ctx, "Making Read() request", map[string]interface{}{
-		"url":     request.URL.String(),
-		"method":  request.Method,
-		"headers": request.Header,
-	})
+	tflog.Debug(ctx, fmt.Sprintf("Resource read API Call: \nURL: %s\nHeaders: %s\nMethod: %s\nRequest Body: %s\n", request.URL.String(), request.Header, request.Method, data.RequestBody.ValueString()))
 
 	httpResp, err := client.Do(request)
 	if err != nil {
@@ -834,11 +831,7 @@ func (r *CurlResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	retryInterval := time.Duration(data.DestroyRetryInterval.ValueInt64()) * time.Second
 	maxRetry := int(data.DestroyMaxRetry.ValueInt64())
 
-	tflog.Debug(ctx, "Making Destroy() request", map[string]interface{}{
-		"url":     request.URL.String(),
-		"method":  request.Method,
-		"headers": request.Header,
-	})
+	tflog.Debug(ctx, fmt.Sprintf("Resource destroy API Call: \nURL: %s\nHeaders: %s\nMethod: %s\nRequest Body: %s\n", request.URL.String(), request.Header, request.Method, data.RequestBody.ValueString()))
 
 	var bodyBytes []byte
 	var statusCode int

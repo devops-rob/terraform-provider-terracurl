@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"io"
 	"net/http"
 	"strconv"
@@ -114,7 +115,6 @@ func (d *CurlDataSource) Schema(ctx context.Context, req datasource.SchemaReques
 			},
 			"retry_interval": schema.Int64Attribute{
 				Optional:            true,
-				Computed:            true,
 				MarkdownDescription: "Interval between each attempt",
 			},
 			"max_retry": schema.Int64Attribute{
@@ -215,6 +215,8 @@ func (d *CurlDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	}
 	data.RequestUrlString = types.StringValue(request.URL.String())
 
+	tflog.Debug(ctx, fmt.Sprintf("Data Source API Call: \nURL: %s\nHeaders: %s\nMethod: %s\nRequest Body: %s\n", request.URL.String(), request.Header, request.Method, request.Body))
+
 	timeout := 10 * time.Second
 	if !data.Timeout.IsNull() {
 		timeout = time.Duration(data.Timeout.ValueInt64()) * time.Second
@@ -291,6 +293,10 @@ func (d CurlDataSource) ConfigValidators(ctx context.Context) []datasource.Confi
 		datasourcevalidator.Conflicting(
 			path.MatchRoot("ca_cert_file"),
 			path.MatchRoot("ca_cert_directory"),
+		),
+		datasourcevalidator.RequiredTogether(
+			path.MatchRoot("max_retry"),
+			path.MatchRoot("retry_interval"),
 		),
 	}
 }

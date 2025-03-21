@@ -26,16 +26,6 @@ type TerraCurlProvider struct {
 	version string
 }
 
-//func (p *TerraCurlProvider) Open(ctx context.Context, request ephemeral.OpenRequest, response *ephemeral.OpenResponse) {
-//	//TODO implement me
-//	panic("implement me")
-//}
-//
-//func (p *TerraCurlProvider) Renew(ctx context.Context, request ephemeral.RenewRequest, response *ephemeral.RenewResponse) {
-//	//TODO implement me
-//	panic("implement me")
-//}
-
 // TerraCurlProviderModel describes the provider data model.
 type TerraCurlProviderModel struct {
 }
