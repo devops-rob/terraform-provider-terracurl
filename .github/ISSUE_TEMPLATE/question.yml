@@ -1,0 +1,10 @@
+name: Ask a question
+description: Join the community on Discord.
+projects: []
+assignees:
+  - devops-rob
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Join the community on [Discord](https://discord.gg/hBQm6ZptRA) and ask questions there.
