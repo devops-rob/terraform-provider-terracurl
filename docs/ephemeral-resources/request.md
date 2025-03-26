@@ -62,8 +62,8 @@ TerraCurl request ephemeral resource
 - `request_body` (String) A request body to attach to the API call
 - `request_parameters` (Map of String) Map of parameters to attach to the API call
 - `retry_interval` (Number) Interval between each attempt
-- `skip_close` (Boolean) Set to true if there are no api calls to make to clean up the ephemeral resource on the target platform.
-- `skip_renew` (Boolean) Set to true to skip renewing ephemeral resources
+- `skip_close` (Boolean) Set to true if there are no api calls to make to clean up the ephemeral resource on the target platform. Default value is set to `true`.
+- `skip_renew` (Boolean) Set to true to skip renewing ephemeral resources. Default value is `true`
 - `skip_tls_verify` (Boolean) Set this to true to disable verification of the server's TLS certificate
 - `timeout` (Number) Time in seconds before each request times out. Defaults to 10
 
