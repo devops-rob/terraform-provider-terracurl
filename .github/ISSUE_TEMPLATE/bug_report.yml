@@ -28,7 +28,7 @@ body:
     validations:
       required: true
   - type: textarea
-    id: reprodice
+    id: reproduce
     attributes:
       label: Please detail the steps to reproduce the issue?
       description: Please provide as much detail as possible to assist with debugging?
