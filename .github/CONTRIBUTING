@@ -1,0 +1,9 @@
+If you wish to work on the provider, you'll first need Go installed on your machine (see Requirements above).
+
+To compile the provider, update the makefile with your OS architecture, then run make install. This will build the provider and put the provider binary in the ~/.terraform.d/plugins/local/ directory.
+
+To generate or update documentation, run make docs.
+
+In order to run the full suite of Acceptance tests, run make test.
+
+Note: Acceptance tests create real resources, and often cost money to run.

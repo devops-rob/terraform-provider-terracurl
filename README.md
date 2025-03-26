@@ -1,8 +1,12 @@
 # Terraform Provider TerraCurl
 
-Available in the [Terraform Registry.](https://registry.terraform.io/providers/devops-rob/terracurl/latest/docs)
+[![Terraform](https://img.shields.io/badge/terraform-%235835CC.svg?style=for-the-badge&logo=terraform&logoColor=white)](https://registry.terraform.io/providers/devops-rob/terracurl/latest/docs)
 
 This provider is designed to be a flexible extension of your terraform code to make managed and unamanged API calls to your target endpoint. Platform native providers should be preferred to TerraCurl but for instances where the platform provider does not have a resource or data source that you require, TerraCurl can be used to make substitute API calls.
+
+## Join the community
+
+[![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/Zc4raDkX4C)
 
 ## Managed API calls
 When using TerraCurl, if the API call is creating a change on the target platform and you would like this change reversed upon a destroy, use the `terracurl_request` resource. This will allow you to enter the API call that should be run when `terraform destroy` is run.
