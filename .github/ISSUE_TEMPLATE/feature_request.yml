@@ -63,5 +63,5 @@ body:
       label: Are you interested in working on this feature?
       multiple: false
       options:
-        - Yes
-        - No
+        - "Yes"
+        - "No"
