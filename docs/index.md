@@ -17,9 +17,16 @@ As of Terraform 1.8 and later, providers can implement functions that you can ca
 Define the provider as a `required_provider` to use its functions
 
 ```terraform
-provider "terracurl" {
-  # No configuration required here
+terraform {
+  required_providers {
+    terracurl = {
+      source  = "devops-rob/terracurl"
+      version = "2.0.0"
+    }
+  }
 }
+
+provider "terracurl" {}
 ```
 
 ## Limitations

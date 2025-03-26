@@ -81,7 +81,7 @@ data "terracurl_request" "test" {
 
 1. Clone the repository
 1. Enter the repository directory
-1. Build the provider using the Go `install` command: 
+1. Build the provider using the Go `install` command:
 ```sh
 $ go install
 ```
