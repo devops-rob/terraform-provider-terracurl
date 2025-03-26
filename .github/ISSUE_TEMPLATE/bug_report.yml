@@ -17,7 +17,7 @@ body:
       description: What is your Github handle?
       placeholder: ex. devops-rob
     validations:
-      required: false
+      required: true
   - type: textarea
     id: bug_description
     attributes:

@@ -1,0 +1,67 @@
+name: Feature Request
+description: File a bug report.
+title: "[Feature Request]: "
+labels: ["feature request", ]
+projects: []
+assignees:
+  - devops-rob
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to raise a feature request!
+  - type: input
+    id: gh_handle
+    attributes:
+      label: Github handle
+      description: What is your Github handle?
+      placeholder: ex. devops-rob
+    validations:
+      required: true
+  - type: textarea
+    id: request_description
+    attributes:
+      label: Please describe the feature you would like added to TerraCurl.
+      description: Please include as much detail as possible about the full functionality of this request.
+      placeholder: Tell us what you would like to see added!
+      value: "Please can digest authentication be added..."
+    validations:
+      required: true
+  - type: textarea
+    id: usecase
+    attributes:
+      label: Please detail the use case for this feature request?
+      description: Giving us a thorough understanding of the use case will help greatly in evaluating the request?
+      placeholder: Tell us why you need this!
+      value: |
+        Our internal API only supports Digest authentication due to our security posture deeming it a more secure way of authenticating...
+    validations:
+      required: true
+  - type: textarea
+    id: pseudo
+    attributes:
+      label: Please add any pseudo code to demonstrate how this feature would work
+      description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+      render: shell
+      value: |
+        resource "terracurl_request" "digest_auth_example" {
+          url     = "https://api.example.com/protected/resource"
+          method  = "GET"
+
+          # Digest Authentication credentials
+          auth {
+            type     = "digest"
+            username = var.api_username
+            password = var.api_password
+          }
+        
+          # The rest of request config...
+        }
+  - type: dropdown
+    id: contribute
+    attributes:
+      label: Are you interested in working on this feature?
+      multiple: false
+      options:
+        - Yes
+        - No
