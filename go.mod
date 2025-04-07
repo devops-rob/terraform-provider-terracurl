@@ -11,7 +11,7 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.26.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-testing v1.12.0
-	github.com/jarcoal/httpmock v1.3.1
+	github.com/jarcoal/httpmock v1.4.0
 )
 
 require (
