@@ -5,6 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/ephemeralvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
@@ -12,10 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"io"
-	"net/http"
-	"strconv"
-	"time"
 )
 
 var _ provider.ProviderWithEphemeralResources = (*TerraCurlProvider)(nil)
@@ -425,6 +427,11 @@ func (e *EphemeralCurlResource) Open(ctx context.Context, req ephemeral.OpenRequ
 	if !data.Headers.IsNull() && !data.Headers.IsUnknown() {
 		for k, v := range data.Headers.Elements() {
 			if strVal, ok := v.(types.String); ok {
+				lowerHeaderName := strings.ToLower(k)
+				if lowerHeaderName == "host" {
+					request.Host = strVal.ValueString()
+					continue
+				}
 				request.Header.Set(k, strVal.ValueString())
 			}
 		}

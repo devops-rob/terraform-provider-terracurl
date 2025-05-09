@@ -4,16 +4,18 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"io"
-	"net/http"
-	"strconv"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -502,6 +504,11 @@ func (r *CurlResource) Create(ctx context.Context, req resource.CreateRequest, r
 	if !data.Headers.IsNull() && !data.Headers.IsUnknown() {
 		for k, v := range data.Headers.Elements() {
 			if strVal, ok := v.(types.String); ok {
+				lowerHeaderName := strings.ToLower(k)
+				if lowerHeaderName == "host" {
+					request.Host = strVal.ValueString()
+					continue
+				}
 				request.Header.Set(k, strVal.ValueString())
 			}
 		}
