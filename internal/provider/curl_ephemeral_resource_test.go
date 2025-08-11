@@ -3,7 +3,10 @@ package provider
 import (
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/jarcoal/httpmock"
 	"net/http"
 	"os"
@@ -44,7 +47,14 @@ resource "terracurl_request" "test" {
   skip_destroy = true
   skip_read    = true
 
-}`
+}
+
+provider "echo" {
+  data = ephemeral.terracurl_request.ephems
+}
+
+resource "echo" "test" {}
+`
 
 func TestAccEphemeralResource(t *testing.T) {
 	t.Setenv("TF_ACC", "true")
@@ -59,12 +69,12 @@ func TestAccEphemeralResource(t *testing.T) {
 	httpmock.RegisterResponder(
 		"POST",
 		"https://example.com/open",
-		httpmock.NewStringResponder(201, `{"name": "devopsrob"}`),
+		httpmock.NewStringResponder(201, `token-123`),
 	)
 	httpmock.RegisterResponder(
 		"GET",
 		"https://example.com/renew",
-		httpmock.NewStringResponder(200, `{"name": "devopsrob"}`),
+		httpmock.NewStringResponder(200, `token-123`),
 	)
 	httpmock.RegisterResponder(
 		"DELETE",
@@ -86,7 +96,7 @@ func TestAccEphemeralResource(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesWithEcho,
 		CheckDestroy:             nil,
 		Steps: []resource.TestStep{
 			{
@@ -108,6 +118,13 @@ func TestAccEphemeralResource(t *testing.T) {
 						return nil
 					},
 				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"echo.test",
+						tfjsonpath.New("data").AtMapKey("response"),
+						knownvalue.StringExact("token-123"),
+					),
+				},
 			},
 			{
 				RefreshState: true,
@@ -170,6 +187,11 @@ resource "terracurl_request" "test" {
 
 }
 
+provider "echo" {
+  data = ephemeral.terracurl_request.ephems
+}
+
+resource "echo" "test" {}
 
 `
 
@@ -195,7 +217,7 @@ func TestAccEphemeralResourceWithHeaders(t *testing.T) {
 	httpmock.RegisterResponder("POST", "https://example.com/open",
 		func(req *http.Request) (*http.Response, error) {
 			if req.Header.Get("Authorization") == "Bearer root" {
-				return httpmock.NewStringResponse(201, `{"message": "success"}`), nil
+				return httpmock.NewStringResponse(201, `token-123`), nil
 			}
 			return httpmock.NewStringResponse(400, `{"error": "missing or invalid header"}`), nil
 		})
@@ -218,7 +240,7 @@ func TestAccEphemeralResourceWithHeaders(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesWithEcho,
 		CheckDestroy:             nil,
 		Steps: []resource.TestStep{
 			{
@@ -228,6 +250,13 @@ func TestAccEphemeralResourceWithHeaders(t *testing.T) {
 					testMockEndpointRegister("GET https://example.com/renew"),
 					testMockEndpointRegister("DELETE https://example.com/close"),
 				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"echo.test",
+						tfjsonpath.New("data").AtMapKey("response"),
+						knownvalue.StringExact("token-123"),
+					),
+				},
 			},
 		},
 	})
@@ -279,7 +308,14 @@ resource "terracurl_request" "test" {
   skip_destroy = true
   skip_read    = true
 
-}`
+}
+
+provider "echo" {
+  data = ephemeral.terracurl_request.ephems
+}
+
+resource "echo" "test" {}
+`
 
 func TestAccEphemeralResourceWithParameters(t *testing.T) {
 	t.Setenv("TF_ACC", "true")
@@ -292,12 +328,12 @@ func TestAccEphemeralResourceWithParameters(t *testing.T) {
 	httpmock.RegisterResponder(
 		"POST",
 		"https://example.com/open?params=true",
-		httpmock.NewStringResponder(201, `{"message": "success"}`),
+		httpmock.NewStringResponder(201, `token-123`),
 	)
 	httpmock.RegisterResponder(
 		"GET",
 		"https://example.com/renew?params=true",
-		httpmock.NewStringResponder(200, `{"message": "success"}`),
+		httpmock.NewStringResponder(200, `token-123`),
 	)
 	httpmock.RegisterResponder(
 		"DELETE",
@@ -318,7 +354,7 @@ func TestAccEphemeralResourceWithParameters(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesWithEcho,
 		CheckDestroy:             nil,
 		Steps: []resource.TestStep{
 			{
@@ -328,6 +364,13 @@ func TestAccEphemeralResourceWithParameters(t *testing.T) {
 					testMockEndpointRegister("GET https://example.com/renew?params=true"),
 					testMockEndpointRegister("DELETE https://example.com/close?params=true"),
 				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"echo.test",
+						tfjsonpath.New("data").AtMapKey("response"),
+						knownvalue.StringExact("token-123"),
+					),
+				},
 			},
 		},
 	})
@@ -368,7 +411,14 @@ resource "terracurl_request" "test" {
   skip_destroy = true
   skip_read    = true
 
-}`
+}
+
+provider "echo" {
+data = ephemeral.terracurl_request.ephems
+}
+
+resource "echo" "test" {}
+`
 
 func TestAccEphemeralResourceSkipRenew(t *testing.T) {
 	t.Setenv("TF_ACC", "true")
@@ -381,12 +431,12 @@ func TestAccEphemeralResourceSkipRenew(t *testing.T) {
 	httpmock.RegisterResponder(
 		"POST",
 		"https://example.com/open",
-		httpmock.NewStringResponder(201, `{"message": "success"}`),
+		httpmock.NewStringResponder(201, `token-123`),
 	)
 	httpmock.RegisterResponder(
 		"GET",
 		"https://example.com/renew",
-		httpmock.NewStringResponder(200, `{"message": "success"}`),
+		httpmock.NewStringResponder(200, `token-123`),
 	)
 	httpmock.RegisterResponder(
 		"DELETE",
@@ -407,7 +457,7 @@ func TestAccEphemeralResourceSkipRenew(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesWithEcho,
 		CheckDestroy:             nil,
 		Steps: []resource.TestStep{
 			{
@@ -415,6 +465,13 @@ func TestAccEphemeralResourceSkipRenew(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testMockEndpointCount("GET https://example.com/renew", 0),
 				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"echo.test",
+						tfjsonpath.New("data").AtMapKey("response"),
+						knownvalue.StringExact("token-123"),
+					),
+				},
 			},
 		},
 	})
@@ -451,7 +508,14 @@ resource "terracurl_request" "test" {
   skip_destroy = true
   skip_read    = true
 
-}`
+}
+
+provider "echo" {
+data = ephemeral.terracurl_request.ephems
+}
+
+resource "echo" "test" {}
+`
 
 func TestAccEphemeralResourceSkipClose(t *testing.T) {
 	t.Setenv("TF_ACC", "true")
@@ -464,12 +528,12 @@ func TestAccEphemeralResourceSkipClose(t *testing.T) {
 	httpmock.RegisterResponder(
 		"POST",
 		"https://example.com/open",
-		httpmock.NewStringResponder(201, `{"message": "success"}`),
+		httpmock.NewStringResponder(201, `token-123`),
 	)
 	httpmock.RegisterResponder(
 		"GET",
 		"https://example.com/renew",
-		httpmock.NewStringResponder(200, `{"message": "success"}`),
+		httpmock.NewStringResponder(200, `token-123`),
 	)
 	httpmock.RegisterResponder(
 		"DELETE",
@@ -490,7 +554,7 @@ func TestAccEphemeralResourceSkipClose(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesWithEcho,
 		CheckDestroy:             nil,
 		Steps: []resource.TestStep{
 			{
@@ -498,6 +562,13 @@ func TestAccEphemeralResourceSkipClose(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testMockEndpointCount("GET https://example.com/close", 0),
 				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"echo.test",
+						tfjsonpath.New("data").AtMapKey("response"),
+						knownvalue.StringExact("token-123"),
+					),
+				},
 			},
 		},
 	})
@@ -553,6 +624,7 @@ resource "terracurl_request" "test" {
   skip_read    = true
 
 }
+
 
 `, url, certFile, certFile, keyFile, renewUrl, renewCertFile, renewCertFile, renewKeyFile, closeUrl, closeCertFile, closeCertFile, closeKeyFile)
 }
