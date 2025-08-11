@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"encoding/hex"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-testing/echoprovider"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -26,6 +27,11 @@ import (
 // reattach.
 var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
 	"terracurl": providerserver.NewProtocol6WithError(New("test")()),
+}
+
+var testAccProtoV6ProviderFactoriesWithEcho = map[string]func() (tfprotov6.ProviderServer, error){
+	"terracurl": providerserver.NewProtocol6WithError(New("test")()),
+	"echo":      echoprovider.NewProviderServer(),
 }
 
 const localCert = `-----BEGIN CERTIFICATE-----
