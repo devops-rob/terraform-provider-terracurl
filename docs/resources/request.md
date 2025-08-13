@@ -60,7 +60,7 @@ TerraCurl request resource
 - `request_parameters` (Map of String) Map of parameters to attach to the API call
 - `retry_interval` (Number) Interval between each attempt
 - `skip_destroy` (Boolean) Set this to true to skip issuing a request when the resource is being destroyed
-- `skip_read` (Boolean) Set to true to skip the read operation (no drift detection). Defaults to false.
+- `skip_read` (Boolean) Set to true to skip the read operation (no drift detection). Defaults to true.
 - `skip_tls_verify` (Boolean) Set this to true to disable verification of the server's TLS certificate
 - `timeout` (Number) Time in seconds before each request times out. Defaults to 10
 
