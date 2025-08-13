@@ -23,6 +23,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
+const (
+	resourceSchemaV0 = 0
+	resourceSchemaV1 = 1
+)
+
 // Ensure provider defined types fully satisfy framework interfaces.
 var _ resource.Resource = &CurlResource{}
 var _ resource.ResourceWithImportState = &CurlResource{}
@@ -97,7 +102,7 @@ func (r *CurlResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
 		MarkdownDescription: "TerraCurl request resource",
-
+		Version:             resourceSchemaV1,
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
 				MarkdownDescription: "Friendly name for this API call",
@@ -323,7 +328,7 @@ func (r *CurlResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 			"skip_read": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Set to true to skip the read operation (no drift detection). Defaults to false.",
+				MarkdownDescription: "Set to true to skip the read operation (no drift detection). Defaults to true.",
 				Default:             booldefault.StaticBool(true),
 			},
 			"read_url": schema.StringAttribute{
@@ -428,6 +433,13 @@ func (r *CurlResource) Create(ctx context.Context, req resource.CreateRequest, r
 	}
 
 	if !data.SkipRead.IsNull() && !data.SkipRead.ValueBool() {
+		tflog.Debug(ctx, "skip_read validation triggered", map[string]interface{}{
+			"skip_read_is_null":   data.SkipRead.IsNull(),
+			"skip_read_value":     data.SkipRead.ValueBool(),
+			"read_url_is_null":    data.ReadUrl.IsNull(),
+			"read_method_is_null": data.ReadMethod.IsNull(),
+			"response_codes_null": data.ReadResponseCodes.IsNull(),
+		})
 		if data.ReadUrl.IsNull() || data.ReadMethod.IsNull() || data.ReadResponseCodes.IsNull() {
 			resp.Diagnostics.AddError(
 				"Invalid Configuration",
@@ -926,5 +938,41 @@ func (r CurlResource) ConfigValidators(ctx context.Context) []resource.ConfigVal
 			path.MatchRoot("read_method"),
 			path.MatchRoot("read_response_codes"),
 		),
+	}
+}
+
+func (r *CurlResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return map[int64]resource.StateUpgrader{
+		resourceSchemaV0: {
+			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
+				tflog.Debug(ctx, "Beginning state upgrade from v0 to v1")
+
+				var oldState CurlResourceModel
+				diags := req.State.Get(ctx, &oldState)
+				resp.Diagnostics.Append(diags...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+
+				// Set skip_read to true and clear read-related fields
+				oldState.SkipRead = types.BoolValue(true)
+				oldState.ReadUrl = types.StringNull()
+				oldState.ReadMethod = types.StringNull()
+				oldState.ReadHeaders = types.MapNull(types.StringType)
+				oldState.ReadParameters = types.MapNull(types.StringType)
+				oldState.ReadRequestBody = types.StringNull()
+				oldState.ReadCertFile = types.StringNull()
+				oldState.ReadKeyFile = types.StringNull()
+				oldState.ReadCaCertFile = types.StringNull()
+				oldState.ReadCaCertDirectory = types.StringNull()
+				oldState.ReadSkipTlsVerify = types.BoolNull()
+				oldState.ReadResponseCodes = types.ListNull(types.StringType)
+
+				// Set the upgraded state
+				diags = resp.State.Set(ctx, oldState)
+				resp.Diagnostics.Append(diags...)
+				tflog.Debug(ctx, "Completed state upgrade from v0 to v1")
+			},
+		},
 	}
 }
