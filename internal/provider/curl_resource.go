@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
@@ -941,37 +942,127 @@ func (r CurlResource) ConfigValidators(ctx context.Context) []resource.ConfigVal
 	}
 }
 
+//func (r *CurlResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+//	return map[int64]resource.StateUpgrader{
+//		resourceSchemaV0: {
+//			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
+//				tflog.Debug(ctx, "Beginning state upgrade from v0 to v1")
+//
+//				var oldState CurlResourceModel
+//				diags := req.State.Get(ctx, &oldState)
+//				resp.Diagnostics.Append(diags...)
+//				if resp.Diagnostics.HasError() {
+//					return
+//				}
+//
+//				// Set skip_read to true and clear read-related fields
+//				oldState.SkipRead = types.BoolValue(true)
+//				oldState.ReadUrl = types.StringNull()
+//				oldState.ReadMethod = types.StringNull()
+//				oldState.ReadHeaders = types.MapNull(types.StringType)
+//				oldState.ReadParameters = types.MapNull(types.StringType)
+//				oldState.ReadRequestBody = types.StringNull()
+//				oldState.ReadCertFile = types.StringNull()
+//				oldState.ReadKeyFile = types.StringNull()
+//				oldState.ReadCaCertFile = types.StringNull()
+//				oldState.ReadCaCertDirectory = types.StringNull()
+//				oldState.ReadSkipTlsVerify = types.BoolNull()
+//				oldState.ReadResponseCodes = types.ListNull(types.StringType)
+//
+//				// Set the upgraded state
+//				diags = resp.State.Set(ctx, oldState)
+//				resp.Diagnostics.Append(diags...)
+//				tflog.Debug(ctx, "Completed state upgrade from v0 to v1")
+//			},
+//		},
+//	}
+//}
+
 func (r *CurlResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
 	return map[int64]resource.StateUpgrader{
-		resourceSchemaV0: {
+		0: {
 			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
-				tflog.Debug(ctx, "Beginning state upgrade from v0 to v1")
-
-				var oldState CurlResourceModel
-				diags := req.State.Get(ctx, &oldState)
-				resp.Diagnostics.Append(diags...)
-				if resp.Diagnostics.HasError() {
+				// Check if the state is nil
+				if req.State == nil {
+					resp.Diagnostics.AddError(
+						"Unable to Upgrade Resource State",
+						"State is nil, cannot perform upgrade.",
+					)
 					return
 				}
 
-				// Set skip_read to true and clear read-related fields
-				oldState.SkipRead = types.BoolValue(true)
-				oldState.ReadUrl = types.StringNull()
-				oldState.ReadMethod = types.StringNull()
-				oldState.ReadHeaders = types.MapNull(types.StringType)
-				oldState.ReadParameters = types.MapNull(types.StringType)
-				oldState.ReadRequestBody = types.StringNull()
-				oldState.ReadCertFile = types.StringNull()
-				oldState.ReadKeyFile = types.StringNull()
-				oldState.ReadCaCertFile = types.StringNull()
-				oldState.ReadCaCertDirectory = types.StringNull()
-				oldState.ReadSkipTlsVerify = types.BoolNull()
-				oldState.ReadResponseCodes = types.ListNull(types.StringType)
+				var oldState CurlResourceModel
+				diags := req.State.Get(ctx, &oldState)
+				if diags.HasError() {
+					resp.Diagnostics.Append(diags...)
+					return
+				}
 
-				// Set the upgraded state
-				diags = resp.State.Set(ctx, oldState)
+				// Create new state with the same schema
+				newState := CurlResourceModel{
+					// Preserve required and important fields
+					Id:     oldState.Id,
+					Name:   oldState.Name,
+					Url:    oldState.Url,
+					Method: oldState.Method,
+
+					// Initialize maps with non-nil values or empty maps
+					Headers:           oldState.Headers,
+					RequestParameters: oldState.RequestParameters,
+					DestroyHeaders:    oldState.DestroyHeaders,
+
+					// Initialize lists with non-nil values or empty lists
+					ResponseCodes:        oldState.ResponseCodes,
+					DestroyResponseCodes: oldState.DestroyResponseCodes,
+					IgnoreResponseFields: oldState.IgnoreResponseFields,
+
+					// Preserve or set to null other fields
+					RequestBody:      oldState.RequestBody,
+					CertFile:         types.StringNull(),
+					KeyFile:          types.StringNull(),
+					CaCertFile:       types.StringNull(),
+					CaCertDirectory:  types.StringNull(),
+					SkipTlsVerify:    types.BoolNull(),
+					Timeout:          types.Int64Null(),
+					MaxRetry:         types.Int64Null(),
+					RetryInterval:    types.Int64Null(),
+					StatusCode:       types.StringNull(),
+					Response:         types.StringNull(),
+					RequestUrlString: types.StringNull(),
+					DriftMarker:      types.StringNull(),
+
+					// Clear read-related fields
+					ReadUrl:             types.StringNull(),
+					ReadMethod:          types.StringNull(),
+					ReadHeaders:         types.MapValueMust(types.StringType, map[string]attr.Value{}),
+					ReadParameters:      types.MapValueMust(types.StringType, map[string]attr.Value{}),
+					ReadRequestBody:     types.StringNull(),
+					ReadResponseCodes:   types.ListValueMust(types.StringType, []attr.Value{}),
+					ReadCertFile:        types.StringNull(),
+					ReadKeyFile:         types.StringNull(),
+					ReadCaCertFile:      types.StringNull(),
+					ReadCaCertDirectory: types.StringNull(),
+					ReadSkipTlsVerify:   types.BoolNull(),
+
+					// Initialize destroy-related fields
+					DestroyUrl:               oldState.DestroyUrl,
+					DestroyMethod:            oldState.DestroyMethod,
+					DestroyRequestParameters: oldState.DestroyRequestParameters,
+					DestroyRequestBody:       oldState.DestroyRequestBody,
+					DestroyTimeout:           types.Int64Null(),
+					DestroyMaxRetry:          types.Int64Null(),
+					DestroyRetryInterval:     types.Int64Null(),
+					DestroyRequestUrlString:  types.StringNull(),
+					DestroyCertFile:          types.StringNull(),
+					DestroyKeyFile:           types.StringNull(),
+					DestroyCaCertFile:        types.StringNull(),
+					DestroyCaCertDirectory:   types.StringNull(),
+					DestroySkipTlsVerify:     types.BoolNull(),
+				}
+
+				// Set the new state
+				diags = resp.State.Set(ctx, &newState)
 				resp.Diagnostics.Append(diags...)
-				tflog.Debug(ctx, "Completed state upgrade from v0 to v1")
 			},
 		},
 	}

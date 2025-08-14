@@ -911,9 +911,8 @@ func TestCurlResource_StateUpgrade(t *testing.T) {
 	if !upgradedState.ReadUrl.IsNull() {
 		t.Error("ReadUrl should be null after upgrade")
 	}
-
-	if !upgradedState.ReadResponseCodes.IsNull() {
-		t.Error("ReadResponseCodes should be null after upgrade")
+	if len(upgradedState.ReadResponseCodes.Elements()) != 0 {
+		t.Errorf("ReadResponseCodes should be an empty list after upgrade. Got: %v", upgradedState.ReadResponseCodes.Elements())
 	}
 
 	if upgradedState.Id.ValueString() != "test-resource" {
