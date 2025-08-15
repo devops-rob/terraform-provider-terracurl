@@ -82,7 +82,7 @@ EOF
 	Content-Type  = "application/json"
   }
 
-  request_parameters = {
+  parameters = {
     id 	 = "12345"
 	name = "devopsrob"
   }
@@ -97,7 +97,7 @@ EOF
 	Content-Type  = "application/json"
   }
 
-  destroy_request_parameters = {
+  destroy_parameters = {
     id 	 = "12345"
 	name = "devopsrob"
   }
@@ -160,7 +160,7 @@ EOF
 	Content-Type  = "application/json"
   }
 
-  request_parameters = {
+  parameters = {
     id 	 = "12345"
 	name = "devopsrob"
   }
@@ -179,7 +179,7 @@ EOF
 	Content-Type  = "application/json"
   }
 
-  destroy_request_parameters = {
+  destroy_parameters = {
     id 	 = "12345"
 	name = "devopsrob"
   }
@@ -239,7 +239,7 @@ EOF
 	Content-Type  = "application/json"
   }
 
-  request_parameters = {
+  parameters = {
     id 	 = "12345"
 	name = "devopsrob"
   }
@@ -258,7 +258,7 @@ EOF
 	Content-Type  = "application/json"
   }
 
-  destroy_request_parameters = {
+  destroy_parameters = {
     id 	 = "12345"
 	name = "devopsrob"
   }
@@ -803,7 +803,7 @@ func TestCurlResource_StateUpgrade(t *testing.T) {
 			"url":                    schema.StringAttribute{Required: true},
 			"method":                 schema.StringAttribute{Optional: true},
 			"headers":                schema.MapAttribute{ElementType: types.StringType, Optional: true},
-			"request_parameters":     schema.MapAttribute{ElementType: types.StringType, Optional: true},
+			"parameters":             schema.MapAttribute{ElementType: types.StringType, Optional: true},
 			"request_body":           schema.StringAttribute{Optional: true},
 			"cert_file":              schema.StringAttribute{Optional: true},
 			"key_file":               schema.StringAttribute{Optional: true},
@@ -839,7 +839,7 @@ func TestCurlResource_StateUpgrade(t *testing.T) {
 			"destroy_url":                schema.StringAttribute{Optional: true},
 			"destroy_method":             schema.StringAttribute{Optional: true},
 			"destroy_headers":            schema.MapAttribute{ElementType: types.StringType, Optional: true},
-			"destroy_request_parameters": schema.MapAttribute{ElementType: types.StringType, Optional: true},
+			"destroy_parameters":         schema.MapAttribute{ElementType: types.StringType, Optional: true},
 			"destroy_request_body":       schema.StringAttribute{Optional: true},
 			"destroy_cert_file":          schema.StringAttribute{Optional: true},
 			"destroy_key_file":           schema.StringAttribute{Optional: true},
@@ -870,12 +870,12 @@ func TestCurlResource_StateUpgrade(t *testing.T) {
 				types.StringValue("200"),
 			},
 		),
-		ResponseCodes:            types.ListValueMust(types.StringType, []attr.Value{}),
-		IgnoreResponseFields:     types.ListValueMust(types.StringType, []attr.Value{}),
-		RequestParameters:        types.MapValueMust(types.StringType, map[string]attr.Value{}),
-		DestroyHeaders:           types.MapValueMust(types.StringType, map[string]attr.Value{}),
-		DestroyRequestParameters: types.MapValueMust(types.StringType, map[string]attr.Value{}),
-		DestroyResponseCodes:     types.ListValueMust(types.StringType, []attr.Value{}),
+		ResponseCodes:        types.ListValueMust(types.StringType, []attr.Value{}),
+		IgnoreResponseFields: types.ListValueMust(types.StringType, []attr.Value{}),
+		Parameters:           types.MapValueMust(types.StringType, map[string]attr.Value{}),
+		DestroyHeaders:       types.MapValueMust(types.StringType, map[string]attr.Value{}),
+		DestroyParameters:    types.MapValueMust(types.StringType, map[string]attr.Value{}),
+		DestroyResponseCodes: types.ListValueMust(types.StringType, []attr.Value{}),
 	}
 
 	state := tfsdk.State{
