@@ -1087,7 +1087,7 @@ func (e *EphemeralCurlResource) Renew(ctx context.Context, req ephemeral.RenewRe
 		}
 	}
 
-	tflog.Debug(ctx, fmt.Sprintf("Parameters: %v\n", privateData.RenewRequestParameters.Elements()))
+	tflog.Debug(ctx, fmt.Sprintf("RequestParameters: %v\n", privateData.RenewRequestParameters.Elements()))
 
 	// Add query parameters
 	if !privateData.RenewRequestParameters.IsNull() && !privateData.RenewRequestParameters.IsUnknown() {
@@ -1447,7 +1447,7 @@ func (e *EphemeralCurlResource) Close(ctx context.Context, req ephemeral.CloseRe
 		tflog.Debug(ctx, "No CloseHeaders provided, proceeding without headers")
 	}
 
-	// Add Query Parameters
+	// Add Query RequestParameters
 	if !privateData.CloseRequestParameters.IsNull() && !privateData.CloseRequestParameters.IsUnknown() {
 		params := request.URL.Query()
 		for k, v := range privateData.CloseRequestParameters.Elements() {

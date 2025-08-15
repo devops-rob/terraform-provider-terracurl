@@ -44,55 +44,55 @@ type CurlResource struct {
 
 // CurlResourceModel describes the resource data model.
 type CurlResourceModel struct {
-	Id                      types.String `tfsdk:"id"`
-	Name                    types.String `tfsdk:"name"`
-	Url                     types.String `tfsdk:"url"`
-	Method                  types.String `tfsdk:"method"`
-	RequestBody             types.String `tfsdk:"request_body"`
-	Headers                 types.Map    `tfsdk:"headers"`
-	Parameters              types.Map    `tfsdk:"parameters"`
-	RequestUrlString        types.String `tfsdk:"request_url_string"`
-	CertFile                types.String `tfsdk:"cert_file"`
-	KeyFile                 types.String `tfsdk:"key_file"`
-	CaCertFile              types.String `tfsdk:"ca_cert_file"`
-	CaCertDirectory         types.String `tfsdk:"ca_cert_directory"`
-	SkipTlsVerify           types.Bool   `tfsdk:"skip_tls_verify"`
-	RetryInterval           types.Int64  `tfsdk:"retry_interval"`
-	MaxRetry                types.Int64  `tfsdk:"max_retry"`
-	Timeout                 types.Int64  `tfsdk:"timeout"`
-	Response                types.String `tfsdk:"response"`
-	ResponseCodes           types.List   `tfsdk:"response_codes"`
-	StatusCode              types.String `tfsdk:"status_code"`
-	SkipDestroy             types.Bool   `tfsdk:"skip_destroy"`
-	DestroyUrl              types.String `tfsdk:"destroy_url"`
-	DestroyMethod           types.String `tfsdk:"destroy_method"`
-	DestroyRequestBody      types.String `tfsdk:"destroy_request_body"`
-	DestroyHeaders          types.Map    `tfsdk:"destroy_headers"`
-	DestroyParameters       types.Map    `tfsdk:"destroy_parameters"`
-	DestroyRequestUrlString types.String `tfsdk:"destroy_request_url_string"`
-	DestroyCertFile         types.String `tfsdk:"destroy_cert_file"`
-	DestroyKeyFile          types.String `tfsdk:"destroy_key_file"`
-	DestroyCaCertFile       types.String `tfsdk:"destroy_ca_cert_file"`
-	DestroyCaCertDirectory  types.String `tfsdk:"destroy_ca_cert_directory"`
-	DestroySkipTlsVerify    types.Bool   `tfsdk:"destroy_skip_tls_verify"`
-	DestroyRetryInterval    types.Int64  `tfsdk:"destroy_retry_interval"`
-	DestroyMaxRetry         types.Int64  `tfsdk:"destroy_max_retry"`
-	DestroyTimeout          types.Int64  `tfsdk:"destroy_timeout"`
-	DestroyResponseCodes    types.List   `tfsdk:"destroy_response_codes"`
-	SkipRead                types.Bool   `tfsdk:"skip_read"`
-	ReadUrl                 types.String `tfsdk:"read_url"`
-	ReadMethod              types.String `tfsdk:"read_method"`
-	ReadHeaders             types.Map    `tfsdk:"read_headers"`
-	ReadParameters          types.Map    `tfsdk:"read_parameters"`
-	ReadRequestBody         types.String `tfsdk:"read_request_body"`
-	ReadCertFile            types.String `tfsdk:"read_cert_file"`
-	ReadKeyFile             types.String `tfsdk:"read_key_file"`
-	ReadCaCertFile          types.String `tfsdk:"read_ca_cert_file"`
-	ReadCaCertDirectory     types.String `tfsdk:"read_ca_cert_directory"`
-	ReadSkipTlsVerify       types.Bool   `tfsdk:"read_skip_tls_verify"`
-	ReadResponseCodes       types.List   `tfsdk:"read_response_codes"`
-	DriftMarker             types.String `tfsdk:"drift_marker"`
-	IgnoreResponseFields    types.List   `tfsdk:"ignore_response_fields"`
+	Id                       types.String `tfsdk:"id"`
+	Name                     types.String `tfsdk:"name"`
+	Url                      types.String `tfsdk:"url"`
+	Method                   types.String `tfsdk:"method"`
+	RequestBody              types.String `tfsdk:"request_body"`
+	Headers                  types.Map    `tfsdk:"headers"`
+	RequestParameters        types.Map    `tfsdk:"request_parameters"`
+	RequestUrlString         types.String `tfsdk:"request_url_string"`
+	CertFile                 types.String `tfsdk:"cert_file"`
+	KeyFile                  types.String `tfsdk:"key_file"`
+	CaCertFile               types.String `tfsdk:"ca_cert_file"`
+	CaCertDirectory          types.String `tfsdk:"ca_cert_directory"`
+	SkipTlsVerify            types.Bool   `tfsdk:"skip_tls_verify"`
+	RetryInterval            types.Int64  `tfsdk:"retry_interval"`
+	MaxRetry                 types.Int64  `tfsdk:"max_retry"`
+	Timeout                  types.Int64  `tfsdk:"timeout"`
+	Response                 types.String `tfsdk:"response"`
+	ResponseCodes            types.List   `tfsdk:"response_codes"`
+	StatusCode               types.String `tfsdk:"status_code"`
+	SkipDestroy              types.Bool   `tfsdk:"skip_destroy"`
+	DestroyUrl               types.String `tfsdk:"destroy_url"`
+	DestroyMethod            types.String `tfsdk:"destroy_method"`
+	DestroyRequestBody       types.String `tfsdk:"destroy_request_body"`
+	DestroyHeaders           types.Map    `tfsdk:"destroy_headers"`
+	DestroyRequestParameters types.Map    `tfsdk:"destroy_request_parameters"`
+	DestroyRequestUrlString  types.String `tfsdk:"destroy_request_url_string"`
+	DestroyCertFile          types.String `tfsdk:"destroy_cert_file"`
+	DestroyKeyFile           types.String `tfsdk:"destroy_key_file"`
+	DestroyCaCertFile        types.String `tfsdk:"destroy_ca_cert_file"`
+	DestroyCaCertDirectory   types.String `tfsdk:"destroy_ca_cert_directory"`
+	DestroySkipTlsVerify     types.Bool   `tfsdk:"destroy_skip_tls_verify"`
+	DestroyRetryInterval     types.Int64  `tfsdk:"destroy_retry_interval"`
+	DestroyMaxRetry          types.Int64  `tfsdk:"destroy_max_retry"`
+	DestroyTimeout           types.Int64  `tfsdk:"destroy_timeout"`
+	DestroyResponseCodes     types.List   `tfsdk:"destroy_response_codes"`
+	SkipRead                 types.Bool   `tfsdk:"skip_read"`
+	ReadUrl                  types.String `tfsdk:"read_url"`
+	ReadMethod               types.String `tfsdk:"read_method"`
+	ReadHeaders              types.Map    `tfsdk:"read_headers"`
+	ReadRequestParameters    types.Map    `tfsdk:"read_request_parameters"`
+	ReadRequestBody          types.String `tfsdk:"read_request_body"`
+	ReadCertFile             types.String `tfsdk:"read_cert_file"`
+	ReadKeyFile              types.String `tfsdk:"read_key_file"`
+	ReadCaCertFile           types.String `tfsdk:"read_ca_cert_file"`
+	ReadCaCertDirectory      types.String `tfsdk:"read_ca_cert_directory"`
+	ReadSkipTlsVerify        types.Bool   `tfsdk:"read_skip_tls_verify"`
+	ReadResponseCodes        types.List   `tfsdk:"read_response_codes"`
+	DriftMarker              types.String `tfsdk:"drift_marker"`
+	IgnoreResponseFields     types.List   `tfsdk:"ignore_response_fields"`
 }
 
 func (r *CurlResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -145,7 +145,7 @@ func (r *CurlResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 					mapplanmodifier.RequiresReplace(),
 				},
 			},
-			"parameters": schema.MapAttribute{
+			"request_parameters": schema.MapAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,
 				MarkdownDescription: "Map of parameters to attach to the API call",
@@ -258,7 +258,7 @@ func (r *CurlResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 					mapplanmodifier.RequiresReplace(),
 				},
 			},
-			"destroy_parameters": schema.MapAttribute{
+			"destroy_request_parameters": schema.MapAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,
 				MarkdownDescription: "Map of parameters to attach to the destroy API call",
@@ -353,7 +353,7 @@ func (r *CurlResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 				MarkdownDescription: "Optional request body to use for the read request.",
 			},
 
-			"read_parameters": schema.MapAttribute{
+			"read_request_parameters": schema.MapAttribute{
 				Optional:            true,
 				ElementType:         types.StringType,
 				MarkdownDescription: "Optional request parameters to add to the URL",
@@ -521,9 +521,9 @@ func (r *CurlResource) Create(ctx context.Context, req resource.CreateRequest, r
 	}
 
 	// Add query parameters
-	if !data.Parameters.IsNull() && !data.Parameters.IsUnknown() {
+	if !data.RequestParameters.IsNull() && !data.RequestParameters.IsUnknown() {
 		params := request.URL.Query()
-		for k, v := range data.Parameters.Elements() {
+		for k, v := range data.RequestParameters.Elements() {
 			if strVal, ok := v.(types.String); ok {
 				params.Add(k, strVal.ValueString())
 			}
@@ -672,10 +672,10 @@ func (r *CurlResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		}
 	}
 
-	// ======= Add Query Parameters =======
-	if !data.ReadParameters.IsNull() && !data.ReadParameters.IsUnknown() {
+	// ======= Add Query RequestParameters =======
+	if !data.ReadRequestParameters.IsNull() && !data.ReadRequestParameters.IsUnknown() {
 		params := request.URL.Query()
-		for k, v := range data.ReadParameters.Elements() {
+		for k, v := range data.ReadRequestParameters.Elements() {
 			if strVal, ok := v.(types.String); ok {
 				params.Add(k, strVal.ValueString())
 			}
@@ -828,10 +828,10 @@ func (r *CurlResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		}
 	}
 
-	// Add Query Parameters
-	if !data.DestroyParameters.IsNull() && !data.DestroyParameters.IsUnknown() {
+	// Add Query RequestParameters
+	if !data.DestroyRequestParameters.IsNull() && !data.DestroyRequestParameters.IsUnknown() {
 		params := request.URL.Query()
-		for k, v := range data.DestroyParameters.Elements() {
+		for k, v := range data.DestroyRequestParameters.Elements() {
 			if strVal, ok := v.(types.String); ok {
 				params.Add(k, strVal.ValueString())
 			}
@@ -942,126 +942,25 @@ func (r CurlResource) ConfigValidators(ctx context.Context) []resource.ConfigVal
 	}
 }
 
-//func (r *CurlResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
-//	return map[int64]resource.StateUpgrader{
-//		resourceSchemaV0: {
-//			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
-//				tflog.Debug(ctx, "Beginning state upgrade from v0 to v1")
-//
-//				var oldState CurlResourceModel
-//				diags := req.State.Get(ctx, &oldState)
-//				resp.Diagnostics.Append(diags...)
-//				if resp.Diagnostics.HasError() {
-//					return
-//				}
-//
-//				// Set skip_read to true and clear read-related fields
-//				oldState.SkipRead = types.BoolValue(true)
-//				oldState.ReadUrl = types.StringNull()
-//				oldState.ReadMethod = types.StringNull()
-//				oldState.ReadHeaders = types.MapNull(types.StringType)
-//				oldState.ReadParameters = types.MapNull(types.StringType)
-//				oldState.ReadRequestBody = types.StringNull()
-//				oldState.ReadCertFile = types.StringNull()
-//				oldState.ReadKeyFile = types.StringNull()
-//				oldState.ReadCaCertFile = types.StringNull()
-//				oldState.ReadCaCertDirectory = types.StringNull()
-//				oldState.ReadSkipTlsVerify = types.BoolNull()
-//				oldState.ReadResponseCodes = types.ListNull(types.StringType)
-//
-//				// Set the upgraded state
-//				diags = resp.State.Set(ctx, oldState)
-//				resp.Diagnostics.Append(diags...)
-//				tflog.Debug(ctx, "Completed state upgrade from v0 to v1")
-//			},
-//		},
-//	}
-//}
-
 func (r *CurlResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
 	return map[int64]resource.StateUpgrader{
 		0: {
 			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
-				// Check if the state is nil
-				if req.State == nil {
-					resp.Diagnostics.AddError(
-						"Unable to Upgrade Resource State",
-						"State is nil, cannot perform upgrade.",
-					)
-					return
-				}
-
-				var oldState CurlResourceModel
-				diags := req.State.Get(ctx, &oldState)
+				var state CurlResourceModel
+				diags := req.State.Get(ctx, &state)
 				if diags.HasError() {
 					resp.Diagnostics.Append(diags...)
 					return
 				}
 
-				// Create new state with the same schema
-				newState := CurlResourceModel{
-					// Preserve required and important fields
-					Id:     oldState.Id,
-					Name:   oldState.Name,
-					Url:    oldState.Url,
-					Method: oldState.Method,
+				// Clear read-related fields as part of the upgrade
+				state.ReadUrl = types.StringNull()
+				state.ReadResponseCodes = types.ListValueMust(
+					types.StringType,
+					[]attr.Value{},
+				)
 
-					// Initialize maps with non-nil values or empty maps
-					Headers:        oldState.Headers,
-					Parameters:     oldState.Parameters,
-					DestroyHeaders: oldState.DestroyHeaders,
-
-					// Initialize lists with non-nil values or empty lists
-					ResponseCodes:        oldState.ResponseCodes,
-					DestroyResponseCodes: oldState.DestroyResponseCodes,
-					IgnoreResponseFields: oldState.IgnoreResponseFields,
-
-					// Preserve or set to null other fields
-					RequestBody:      oldState.RequestBody,
-					CertFile:         types.StringNull(),
-					KeyFile:          types.StringNull(),
-					CaCertFile:       types.StringNull(),
-					CaCertDirectory:  types.StringNull(),
-					SkipTlsVerify:    types.BoolNull(),
-					Timeout:          types.Int64Null(),
-					MaxRetry:         types.Int64Null(),
-					RetryInterval:    types.Int64Null(),
-					StatusCode:       types.StringNull(),
-					Response:         types.StringNull(),
-					RequestUrlString: types.StringNull(),
-					DriftMarker:      types.StringNull(),
-
-					// Clear read-related fields
-					ReadUrl:             types.StringNull(),
-					ReadMethod:          types.StringNull(),
-					ReadHeaders:         types.MapValueMust(types.StringType, map[string]attr.Value{}),
-					ReadParameters:      types.MapValueMust(types.StringType, map[string]attr.Value{}),
-					ReadRequestBody:     types.StringNull(),
-					ReadResponseCodes:   types.ListValueMust(types.StringType, []attr.Value{}),
-					ReadCertFile:        types.StringNull(),
-					ReadKeyFile:         types.StringNull(),
-					ReadCaCertFile:      types.StringNull(),
-					ReadCaCertDirectory: types.StringNull(),
-					ReadSkipTlsVerify:   types.BoolNull(),
-
-					// Initialize destroy-related fields
-					DestroyUrl:              oldState.DestroyUrl,
-					DestroyMethod:           oldState.DestroyMethod,
-					DestroyParameters:       oldState.DestroyParameters,
-					DestroyRequestBody:      oldState.DestroyRequestBody,
-					DestroyTimeout:          types.Int64Null(),
-					DestroyMaxRetry:         types.Int64Null(),
-					DestroyRetryInterval:    types.Int64Null(),
-					DestroyRequestUrlString: types.StringNull(),
-					DestroyCertFile:         types.StringNull(),
-					DestroyKeyFile:          types.StringNull(),
-					DestroyCaCertFile:       types.StringNull(),
-					DestroyCaCertDirectory:  types.StringNull(),
-					DestroySkipTlsVerify:    types.BoolNull(),
-				}
-
-				// Set the new state
-				diags = resp.State.Set(ctx, &newState)
+				diags = resp.State.Set(ctx, &state)
 				resp.Diagnostics.Append(diags...)
 			},
 		},
