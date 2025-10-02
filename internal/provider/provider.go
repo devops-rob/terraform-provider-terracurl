@@ -7,6 +7,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/hashicorp/terraform-plugin-framework/action"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -17,6 +18,7 @@ import (
 // Ensure TerraCurlProvider satisfies various provider interfaces.
 var _ provider.Provider = &TerraCurlProvider{}
 var _ provider.ProviderWithFunctions = &TerraCurlProvider{}
+var _ provider.ProviderWithActions = &TerraCurlProvider{}
 
 // TerraCurlProvider defines the provider implementation.
 type TerraCurlProvider struct {
@@ -56,6 +58,13 @@ func (p *TerraCurlProvider) Configure(ctx context.Context, req provider.Configur
 	client := http.DefaultClient
 	resp.DataSourceData = client
 	resp.ResourceData = client
+	resp.ActionData = client
+}
+
+func (p *TerraCurlProvider) Actions(ctx context.Context) []func() action.Action {
+	return []func() action.Action{
+		NewCurlAction,
+	}
 }
 
 func (p *TerraCurlProvider) Resources(ctx context.Context) []func() resource.Resource {
