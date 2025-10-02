@@ -4,6 +4,7 @@ version = 2.0.0
 arch = darwin_amd64
 #arch = linux_amd64
 
+.PHONY: docs
 docs:
 	go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs generate --examples-dir=./examples
 build:
