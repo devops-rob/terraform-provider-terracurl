@@ -948,7 +948,7 @@ func TestCurlResource_StateUpgrade_WithDestroyParameters(t *testing.T) {
 		"request_parameters": {"database": "test_db"},
 		"response_codes": ["200", "201"],
 		"skip_destroy": false,
-	    "destroy_url": "https://api.example.com/delete",
+	"destroy_url": "https://api.example.com/delete",
 		"destroy_method": "DELETE",
 		"destroy_parameters": {"role_id": "12345", "force": "true"},
 		"destroy_headers": {"Authorization": "Bearer token"},
@@ -962,19 +962,6 @@ func TestCurlResource_StateUpgrade_WithDestroyParameters(t *testing.T) {
 	}`
 
 	// Create a minimal schema for the empty state to avoid nil pointer issues
-	emptySchema := schema.Schema{
-		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{Computed: true},
-		},
-	}
-
-	req := resource2.UpgradeStateRequest{
-		State: &tfsdk.State{Schema: emptySchema}, // Provide schema to avoid nil pointer
-		RawState: &tfprotov6.RawState{
-			JSON: []byte(rawStateJSON),
-		},
-	}
-
 	// Use the actual resource schema for consistency
 	rUpgrade := &CurlResource{}
 	schemaResp := &resource2.SchemaResponse{}
@@ -988,7 +975,7 @@ func TestCurlResource_StateUpgrade_WithDestroyParameters(t *testing.T) {
 		},
 	}
 
-	req = resource2.UpgradeStateRequest{
+	req := resource2.UpgradeStateRequest{
 		State: &tfsdk.State{Schema: emptySchema1}, // Provide schema to avoid nil pointer
 		RawState: &tfprotov6.RawState{
 			JSON: []byte(rawStateJSON),
@@ -1154,17 +1141,6 @@ func TestCurlResource_StateUpgrade_EmptyDestroyParameters(t *testing.T) {
 		JSON: []byte(rawStateJSON),
 	}
 
-	emptySchema := schema.Schema{
-		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{Computed: true},
-		},
-	}
-
-	req := resource2.UpgradeStateRequest{
-		State: &tfsdk.State{Schema: emptySchema},
-		RawState: rawState,
-	}
-
 	// Use the actual resource schema for consistency  
 	rUpgrade2 := &CurlResource{}
 	schemaResp2 := &resource2.SchemaResponse{}
@@ -1177,7 +1153,7 @@ func TestCurlResource_StateUpgrade_EmptyDestroyParameters(t *testing.T) {
 		},
 	}
 
-	req = resource2.UpgradeStateRequest{
+	req := resource2.UpgradeStateRequest{
 		State: &tfsdk.State{Schema: emptySchema2},
 		RawState: rawState,
 	}
