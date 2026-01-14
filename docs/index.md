@@ -1,12 +1,20 @@
 ---
 page_title: "Provider: TerraCurl"
 description: |-
-  TODO
+  TerraCurl is an open-source Terraform provider that enables declarative, configurable HTTP API interactions directly from Terraform. It allows infrastructure and platform teams to integrate with most REST or HTTP-based services including those without native Terraform providers, using standard Terraform workflows.
+
+  With TerraCurl, you can define create, read, update, and delete operations as HTTP requests, complete with support for custom headers, authentication, TLS configuration, retries, and response parsing. This makes it possible to manage third-party APIs, internal services, and bespoke platforms as first-class Terraform resources, without resorting to brittle null_resource hacks or external scripts.
+
+  TerraCurl is designed for reliability and correctness, supporting state reconciliation, drift detection, idempotency, and lifecycle control. It can trigger resource recreation when remote state diverges from expected responses, handle ephemeral resources, and work with multipart and form-based APIs. By bringing arbitrary HTTP endpoints under Terraform’s declarative model, TerraCurl bridges the gap between “infrastructure as code” and “API as code”, enabling consistent automation, auditability, and repeatability across the entire platform stack.
 ---
 
 # TERRACURL Provider
 
-TOOD
+TerraCurl is an open-source Terraform provider that enables declarative, configurable HTTP API interactions directly from Terraform. It allows infrastructure and platform teams to integrate with most REST or HTTP-based services, including those without native Terraform providers, using standard Terraform workflows.
+
+With TerraCurl, you can define create, read, update, and delete operations as HTTP requests, complete with support for custom headers, authentication, TLS configuration, retries, and response parsing. This makes it possible to manage third-party APIs, internal services, and bespoke platforms as first-class Terraform resources, without resorting to brittle null_resource hacks or external scripts.
+
+TerraCurl is designed for reliability and correctness, supporting state reconciliation, drift detection, idempotency, and lifecycle control. It can trigger resource recreation when remote state diverges from expected responses, handle ephemeral resources, and work with multipart and form-based APIs. By bringing arbitrary HTTP endpoints under Terraform’s declarative model, TerraCurl bridges the gap between “infrastructure as code” and “API as code”, enabling consistent automation, auditability, and repeatability across the entire platform stack.
 
 Use the navigation to the left to read about the available resources.
 
