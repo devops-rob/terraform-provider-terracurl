@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
@@ -922,5 +923,265 @@ func TestCurlResource_StateUpgrade(t *testing.T) {
 
 	if upgradedState.Url.ValueString() != "https://api.example.com" {
 		t.Error("Url was not preserved")
+	}
+}
+
+// TestCurlResource_StateUpgrade_WithDestroyParameters tests the migration from destroy_parameters to destroy_request_parameters
+func TestCurlResource_StateUpgrade_WithDestroyParameters(t *testing.T) {
+	ctx := context.Background()
+	r := &CurlResource{}
+
+	upgraders := r.UpgradeState(ctx)
+	upgrader, ok := upgraders[0]
+	if !ok {
+		t.Fatal("No upgrader found for version 0")
+	}
+
+	// Simulate raw state JSON that contains the old "destroy_parameters" attribute
+	rawStateJSON := `{
+		"id": "test-resource-123",
+		"name": "example_role",
+		"url": "https://api.example.com/create",
+		"method": "POST",
+		"request_body": "{\"role\": \"test_role\"}",
+		"headers": {"Authorization": "Bearer token", "Content-Type": "application/json"},
+		"request_parameters": {"database": "test_db"},
+		"response_codes": ["200", "201"],
+		"skip_destroy": false,
+	"destroy_url": "https://api.example.com/delete",
+		"destroy_method": "DELETE",
+		"destroy_parameters": {"role_id": "12345", "force": "true"},
+		"destroy_headers": {"Authorization": "Bearer token"},
+		"destroy_response_codes": ["200", "204"],
+		"retry_interval": 10,
+		"max_retry": 3,
+		"timeout": 30,
+		"cert_file": "/path/to/cert.pem",
+		"key_file": "/path/to/key.pem",
+		"skip_tls_verify": true
+	}`
+
+	// Create a minimal schema for the empty state to avoid nil pointer issues
+	// Use the actual resource schema for consistency
+	rUpgrade := &CurlResource{}
+	schemaResp := &resource2.SchemaResponse{}
+	rUpgrade.Schema(ctx, resource2.SchemaRequest{}, schemaResp)
+	schemaVar := schemaResp.Schema
+
+	// Create a minimal schema for the empty state to avoid nil pointer issues
+	emptySchema1 := schema.Schema{
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{Computed: true},
+		},
+	}
+
+	req := resource2.UpgradeStateRequest{
+		State: &tfsdk.State{Schema: emptySchema1}, // Provide schema to avoid nil pointer
+		RawState: &tfprotov6.RawState{
+			JSON: []byte(rawStateJSON),
+		},
+	}
+
+	resp := &resource2.UpgradeStateResponse{
+		State: tfsdk.State{
+			Schema: schemaVar,
+		},
+	}
+
+	// Execute the upgrade
+	upgrader.StateUpgrader(ctx, req, resp)
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("upgrade failed: %v", resp.Diagnostics)
+	}
+
+	// Get the upgraded state
+	var upgradedState CurlResourceModel
+	diags := resp.State.Get(ctx, &upgradedState)
+	if diags.HasError() {
+		t.Fatalf("error getting upgraded state: %v", diags)
+	}
+
+	// Verify that data was preserved and migrated correctly
+	if upgradedState.Id.ValueString() != "test-resource-123" {
+		t.Errorf("Expected id 'test-resource-123', got '%s'", upgradedState.Id.ValueString())
+	}
+
+	if upgradedState.Name.ValueString() != "example_role" {
+		t.Errorf("Expected name 'example_role', got '%s'", upgradedState.Name.ValueString())
+	}
+
+	if upgradedState.Url.ValueString() != "https://api.example.com/create" {
+		t.Errorf("Expected url 'https://api.example.com/create', got '%s'", upgradedState.Url.ValueString())
+	}
+
+	if upgradedState.Method.ValueString() != "POST" {
+		t.Errorf("Expected method 'POST', got '%s'", upgradedState.Method.ValueString())
+	}
+
+	if upgradedState.RequestBody.ValueString() != "{\"role\": \"test_role\"}" {
+		t.Errorf("Expected request_body to be preserved, got '%s'", upgradedState.RequestBody.ValueString())
+	}
+
+	if upgradedState.DestroyUrl.ValueString() != "https://api.example.com/delete" {
+		t.Errorf("Expected destroy_url to be preserved, got '%s'", upgradedState.DestroyUrl.ValueString())
+	}
+
+	if upgradedState.DestroyMethod.ValueString() != "DELETE" {
+		t.Errorf("Expected destroy_method to be preserved, got '%s'", upgradedState.DestroyMethod.ValueString())
+	}
+
+	// Verify the key migration: destroy_parameters -> destroy_request_parameters
+	if upgradedState.DestroyRequestParameters.IsNull() {
+		t.Error("Expected destroy_request_parameters to be populated from destroy_parameters")
+	} else {
+		destroyParams := upgradedState.DestroyRequestParameters.Elements()
+		if roleId, ok := destroyParams["role_id"]; !ok || roleId.(types.String).ValueString() != "12345" {
+			t.Error("Expected destroy_request_parameters to contain role_id='12345'")
+		}
+		if force, ok := destroyParams["force"]; !ok || force.(types.String).ValueString() != "true" {
+			t.Error("Expected destroy_request_parameters to contain force='true'")
+		}
+	}
+
+	// Verify other complex types were preserved
+	if upgradedState.Headers.IsNull() {
+		t.Error("Expected headers to be preserved")
+	} else {
+		headers := upgradedState.Headers.Elements()
+		if auth, ok := headers["Authorization"]; !ok || auth.(types.String).ValueString() != "Bearer token" {
+			t.Error("Expected headers to contain Authorization='Bearer token'")
+		}
+	}
+
+	if upgradedState.RequestParameters.IsNull() {
+		t.Error("Expected request_parameters to be preserved")
+	} else {
+		reqParams := upgradedState.RequestParameters.Elements()
+		if db, ok := reqParams["database"]; !ok || db.(types.String).ValueString() != "test_db" {
+			t.Error("Expected request_parameters to contain database='test_db'")
+		}
+	}
+
+	// Verify response_codes list was preserved
+	if upgradedState.ResponseCodes.IsNull() {
+		t.Error("Expected response_codes to be preserved")
+	} else {
+		responseCodes := upgradedState.ResponseCodes.Elements()
+		if len(responseCodes) != 2 {
+			t.Errorf("Expected 2 response codes, got %d", len(responseCodes))
+		}
+	}
+
+	// Verify integer fields were preserved
+	if upgradedState.RetryInterval.ValueInt64() != 10 {
+		t.Errorf("Expected retry_interval 10, got %d", upgradedState.RetryInterval.ValueInt64())
+	}
+
+	if upgradedState.MaxRetry.ValueInt64() != 3 {
+		t.Errorf("Expected max_retry 3, got %d", upgradedState.MaxRetry.ValueInt64())
+	}
+
+	if upgradedState.Timeout.ValueInt64() != 30 {
+		t.Errorf("Expected timeout 30, got %d", upgradedState.Timeout.ValueInt64())
+	}
+
+	// Verify boolean fields were preserved
+	if !upgradedState.SkipTlsVerify.ValueBool() {
+		t.Error("Expected skip_tls_verify to be true")
+	}
+
+	if upgradedState.SkipDestroy.ValueBool() {
+		t.Error("Expected skip_destroy to be false")
+	}
+
+	// Verify string fields were preserved
+	if upgradedState.CertFile.ValueString() != "/path/to/cert.pem" {
+		t.Errorf("Expected cert_file to be preserved, got '%s'", upgradedState.CertFile.ValueString())
+	}
+
+	if upgradedState.KeyFile.ValueString() != "/path/to/key.pem" {
+		t.Errorf("Expected key_file to be preserved, got '%s'", upgradedState.KeyFile.ValueString())
+	}
+
+	// Verify v1 upgrade changes
+	if !upgradedState.SkipRead.ValueBool() {
+		t.Error("Expected skip_read to be set to true in v1 upgrade")
+	}
+
+	if !upgradedState.ReadUrl.IsNull() {
+		t.Error("Expected read_url to be null in v1 upgrade")
+	}
+
+	if !upgradedState.ReadResponseCodes.IsNull() {
+		t.Error("Expected read_response_codes to be null in v1 upgrade")
+	}
+}
+
+// TestCurlResource_StateUpgrade_EmptyDestroyParameters tests handling of null destroy_parameters
+func TestCurlResource_StateUpgrade_EmptyDestroyParameters(t *testing.T) {
+	ctx := context.Background()
+	r := &CurlResource{}
+
+	upgraders := r.UpgradeState(ctx)
+	upgrader, ok := upgraders[0]
+	if !ok {
+		t.Fatal("No upgrader found for version 0")
+	}
+
+	// Simulate raw state JSON with null destroy_parameters
+	rawStateJSON := `{
+		"id": "test-null-params",
+		"name": "test_resource",
+		"url": "https://example.com",
+		"method": "GET",
+		"destroy_parameters": null
+	}`
+
+	rawState := &tfprotov6.RawState{
+		JSON: []byte(rawStateJSON),
+	}
+
+	// Use the actual resource schema for consistency  
+	rUpgrade2 := &CurlResource{}
+	schemaResp2 := &resource2.SchemaResponse{}
+	rUpgrade2.Schema(ctx, resource2.SchemaRequest{}, schemaResp2)
+	schemaVar2 := schemaResp2.Schema
+
+	emptySchema2 := schema.Schema{
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{Computed: true},
+		},
+	}
+
+	req := resource2.UpgradeStateRequest{
+		State: &tfsdk.State{Schema: emptySchema2},
+		RawState: rawState,
+	}
+
+	resp := &resource2.UpgradeStateResponse{
+		State: tfsdk.State{
+			Schema: schemaVar2,
+		},
+	}
+
+	upgrader.StateUpgrader(ctx, req, resp)
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("upgrade failed: %v", resp.Diagnostics)
+	}
+
+	var upgradedState CurlResourceModel
+	diags := resp.State.Get(ctx, &upgradedState)
+	if diags.HasError() {
+		t.Fatalf("error getting upgraded state: %v", diags)
+	}
+
+	// Verify that null destroy_parameters results in null destroy_request_parameters
+	if !upgradedState.DestroyRequestParameters.IsNull() {
+		t.Error("Expected destroy_request_parameters to be null when destroy_parameters was null")
+	}
+
+	// Verify basic fields were still extracted
+	if upgradedState.Id.ValueString() != "test-null-params" {
+		t.Errorf("Expected id to be preserved, got '%s'", upgradedState.Id.ValueString())
 	}
 }

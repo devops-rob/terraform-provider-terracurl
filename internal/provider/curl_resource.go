@@ -3,8 +3,11 @@ package provider
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
@@ -947,14 +950,116 @@ func (r *CurlResource) UpgradeState(ctx context.Context) map[int64]resource.Stat
 			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
 				tflog.Debug(ctx, "Beginning state upgrade from v0 to v1")
 
+				// The main issue is that v0 used "destroy_parameters" but v1 uses "destroy_request_parameters"
+				// We need to handle this attribute rename during the upgrade
+				
 				var oldState CurlResourceModel
+				
+				// First, try the normal state extraction
 				diags := req.State.Get(ctx, &oldState)
-				resp.Diagnostics.Append(diags...)
-				if resp.Diagnostics.HasError() {
-					return
+				
+				if diags.HasError() {
+					tflog.Info(ctx, "Direct state extraction failed, attempting to extract values from raw state", map[string]interface{}{
+						"errors": diags.Errors(),
+					})
+					
+					// Try to extract what we can from the raw state
+					if req.RawState != nil && len(req.RawState.JSON) > 0 {
+						// Parse the raw JSON state
+						var rawStateMap map[string]interface{}
+						if err := json.Unmarshal(req.RawState.JSON, &rawStateMap); err != nil {
+							tflog.Error(ctx, "Failed to unmarshal raw state JSON", map[string]interface{}{
+								"error": err.Error(),
+							})
+							resp.Diagnostics.AddError("State Upgrade Error", fmt.Sprintf("Failed to parse raw state: %s", err))
+							return
+						}
+						
+						tflog.Debug(ctx, "Successfully parsed raw state, extracting values")
+						
+						// Extract core values from raw state
+						if id, ok := rawStateMap["id"].(string); ok && id != "" {
+							oldState.Id = types.StringValue(id)
+						} else {
+							oldState.Id = types.StringUnknown()
+						}
+						
+						if name, ok := rawStateMap["name"].(string); ok && name != "" {
+							oldState.Name = types.StringValue(name)
+						} else {
+							oldState.Name = types.StringUnknown()
+						}
+						
+						if url, ok := rawStateMap["url"].(string); ok && url != "" {
+							oldState.Url = types.StringValue(url)
+						} else {
+							oldState.Url = types.StringUnknown()
+						}
+						
+						if method, ok := rawStateMap["method"].(string); ok && method != "" {
+							oldState.Method = types.StringValue(method)
+						} else {
+							oldState.Method = types.StringUnknown()
+						}
+						
+						// Extract optional string fields
+						oldState.RequestBody = extractStringFromRaw(rawStateMap, "request_body")
+						oldState.CertFile = extractStringFromRaw(rawStateMap, "cert_file")
+						oldState.KeyFile = extractStringFromRaw(rawStateMap, "key_file")
+						oldState.CaCertFile = extractStringFromRaw(rawStateMap, "ca_cert_file")
+						oldState.CaCertDirectory = extractStringFromRaw(rawStateMap, "ca_cert_directory")
+						oldState.DestroyUrl = extractStringFromRaw(rawStateMap, "destroy_url")
+						oldState.DestroyMethod = extractStringFromRaw(rawStateMap, "destroy_method")
+						oldState.DestroyRequestBody = extractStringFromRaw(rawStateMap, "destroy_request_body")
+						
+						// Extract boolean fields
+						oldState.SkipTlsVerify = extractBoolFromRaw(rawStateMap, "skip_tls_verify")
+						oldState.SkipDestroy = extractBoolFromRaw(rawStateMap, "skip_destroy")
+						
+						// Extract int64 fields
+						oldState.RetryInterval = extractInt64FromRaw(rawStateMap, "retry_interval")
+						oldState.MaxRetry = extractInt64FromRaw(rawStateMap, "max_retry")
+						oldState.Timeout = extractInt64FromRaw(rawStateMap, "timeout")
+						oldState.DestroyRetryInterval = extractInt64FromRaw(rawStateMap, "destroy_retry_interval")
+						oldState.DestroyMaxRetry = extractInt64FromRaw(rawStateMap, "destroy_max_retry")
+						oldState.DestroyTimeout = extractInt64FromRaw(rawStateMap, "destroy_timeout")
+						
+						// Extract map fields
+						oldState.Headers = extractMapFromRaw(rawStateMap, "headers")
+						oldState.RequestParameters = extractMapFromRaw(rawStateMap, "request_parameters")
+						oldState.DestroyHeaders = extractMapFromRaw(rawStateMap, "destroy_headers")
+						
+						// Handle the key attribute rename: destroy_parameters -> destroy_request_parameters
+						if destroyParams := extractMapFromRaw(rawStateMap, "destroy_parameters"); !destroyParams.IsNull() {
+							oldState.DestroyRequestParameters = destroyParams
+							tflog.Debug(ctx, "Migrated destroy_parameters to destroy_request_parameters")
+						} else {
+							oldState.DestroyRequestParameters = extractMapFromRaw(rawStateMap, "destroy_request_parameters")
+						}
+						
+						// Extract list fields
+						oldState.ResponseCodes = extractListFromRaw(rawStateMap, "response_codes")
+						oldState.DestroyResponseCodes = extractListFromRaw(rawStateMap, "destroy_response_codes")
+						oldState.IgnoreResponseFields = extractListFromRaw(rawStateMap, "ignore_response_fields")
+						
+						// Set remaining computed/null fields
+						oldState.RequestUrlString = types.StringNull()
+						oldState.Response = types.StringNull()
+						oldState.StatusCode = types.StringNull()
+						oldState.DestroyRequestUrlString = types.StringNull()
+						oldState.DriftMarker = types.StringNull()
+						
+					} else {
+						tflog.Error(ctx, "No raw state available for manual extraction")
+						resp.Diagnostics.AddError("State Upgrade Error", "No raw state available for manual extraction")
+						return
+					}
+					
+					// Clear the extraction errors since we handled them manually
+					resp.Diagnostics = diag.Diagnostics{}
 				}
 
-				// Set skip_read to true and clear read-related fields
+				// The key change in v1: set skip_read to true and clear read-related fields
 				oldState.SkipRead = types.BoolValue(true)
 				oldState.ReadUrl = types.StringNull()
 				oldState.ReadMethod = types.StringNull()
@@ -971,8 +1076,73 @@ func (r *CurlResource) UpgradeState(ctx context.Context) map[int64]resource.Stat
 				// Set the upgraded state
 				diags = resp.State.Set(ctx, oldState)
 				resp.Diagnostics.Append(diags...)
-				tflog.Debug(ctx, "Completed state upgrade from v0 to v1")
+				
+				if resp.Diagnostics.HasError() {
+					tflog.Error(ctx, "Failed to set upgraded state", map[string]interface{}{
+						"errors": resp.Diagnostics.Errors(),
+					})
+				} else {
+					tflog.Debug(ctx, "Successfully completed state upgrade from v0 to v1")
+				}
 			},
 		},
 	}
+}
+
+// Helper functions for extracting values from raw state during upgrade
+
+func extractStringFromRaw(rawState map[string]interface{}, key string) types.String {
+	if value, ok := rawState[key].(string); ok && value != "" {
+		return types.StringValue(value)
+	}
+	return types.StringNull()
+}
+
+func extractBoolFromRaw(rawState map[string]interface{}, key string) types.Bool {
+	if value, ok := rawState[key].(bool); ok {
+		return types.BoolValue(value)
+	}
+	return types.BoolNull()
+}
+
+func extractInt64FromRaw(rawState map[string]interface{}, key string) types.Int64 {
+	if value, ok := rawState[key].(float64); ok {
+		return types.Int64Value(int64(value))
+	}
+	if value, ok := rawState[key].(int64); ok {
+		return types.Int64Value(value)
+	}
+	return types.Int64Null()
+}
+
+func extractMapFromRaw(rawState map[string]interface{}, key string) types.Map {
+	if value, ok := rawState[key].(map[string]interface{}); ok {
+		elements := make(map[string]attr.Value)
+		for k, v := range value {
+			if str, ok := v.(string); ok {
+				elements[k] = types.StringValue(str)
+			}
+		}
+		if len(elements) > 0 {
+			mapValue, _ := types.MapValue(types.StringType, elements)
+			return mapValue
+		}
+	}
+	return types.MapNull(types.StringType)
+}
+
+func extractListFromRaw(rawState map[string]interface{}, key string) types.List {
+	if value, ok := rawState[key].([]interface{}); ok {
+		elements := make([]attr.Value, len(value))
+		for i, v := range value {
+			if str, ok := v.(string); ok {
+				elements[i] = types.StringValue(str)
+			}
+		}
+		if len(elements) > 0 {
+			listValue, _ := types.ListValue(types.StringType, elements)
+			return listValue
+		}
+	}
+	return types.ListNull(types.StringType)
 }
