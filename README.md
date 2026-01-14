@@ -2,8 +2,11 @@
 
 [![Terraform](https://img.shields.io/badge/terraform-%235835CC.svg?style=for-the-badge&logo=terraform&logoColor=white)](https://registry.terraform.io/providers/devops-rob/terracurl/latest/docs)
 
-This provider is designed to be a flexible extension of your terraform code to make managed and unamanged API calls to your target endpoint. Platform native providers should be preferred to TerraCurl but for instances where the platform provider does not have a resource or data source that you require, TerraCurl can be used to make substitute API calls.
+TerraCurl is an open-source Terraform provider that enables declarative, configurable HTTP API interactions directly from Terraform. It allows infrastructure and platform teams to integrate with most REST or HTTP-based services, including those without native Terraform providers, using standard Terraform workflows.
 
+With TerraCurl, you can define create, read, update, and delete operations as HTTP requests, complete with support for custom headers, authentication, TLS configuration, retries, and response parsing. This makes it possible to manage third-party APIs, internal services, and bespoke platforms as first-class Terraform resources, without resorting to brittle null_resource hacks or external scripts.
+
+TerraCurl is designed for reliability and correctness, supporting state reconciliation, drift detection, idempotency, and lifecycle control. It can trigger resource recreation when a remote state diverges from expected responses, handle ephemeral resources, and work with multipart and form-based APIs. By bringing arbitrary HTTP endpoints under Terraform’s declarative model, TerraCurl bridges the gap between “infrastructure as code” and “API as code”, enabling consistent automation, auditability, and repeatability across the entire platform stack.
 ## Join the community
 
 [![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/Zc4raDkX4C)
