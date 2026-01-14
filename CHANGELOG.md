@@ -1,7 +1,6 @@
-## 2..0 (Unreleased)
+## 2.2.0 
 
 FEATURES:
 
-- Upgraded SDK to Terraform Provider Framework
-- Drift detection support
-- Ephemeral resource support
+- Bug fixes with state upgrade
+- Documentation updates
