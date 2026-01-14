@@ -10,6 +10,7 @@ on:
   push:
     paths-ignore:
       - 'README.md'
+  workflow_dispatch:
 
 # Testing only needs permissions to read the repository contents.
 permissions:
