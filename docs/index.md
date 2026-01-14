@@ -52,6 +52,6 @@ ephemeral "terracurl_request" "ephems" {
 
 ## Limitations
 
-- Currently this provider does not support AWS APIs due to the nature of how they authenticate requests. Future AWS support is planned.
-- Write-only attributes is currently not supported; however, there are plans to introduce this in the short-to-medium term future.
+- Currently, this provider does not support AWS APIs due to the nature of how they authenticate requests. Future AWS support is planned.
+- Write-only attributes are currently not supported; however, there are plans to introduce this in the short-to-medium term future.
 - Terraform Actions support is currently not supported, but work is well under way to introduce this functionality.
