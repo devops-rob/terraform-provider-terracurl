@@ -4,16 +4,18 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/datasourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"io"
-	"net/http"
-	"strconv"
-	"time"
 )
 
 // Ensure the implementation satisfies the desired interfaces.
@@ -198,6 +200,11 @@ func (d *CurlDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	if !data.Headers.IsNull() && !data.Headers.IsUnknown() {
 		for k, v := range data.Headers.Elements() {
 			if strVal, ok := v.(types.String); ok {
+				lowerHeaderName := strings.ToLower(k)
+				if lowerHeaderName == "host" {
+					request.Host = strVal.ValueString()
+					continue
+				}
 				request.Header.Set(k, strVal.ValueString())
 			}
 		}
