@@ -3,6 +3,11 @@ package provider
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	resource2 "github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -13,10 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/jarcoal/httpmock"
-	"net/http"
-	"os"
-	"testing"
-	"time"
 )
 
 func TestAccresourceCurl(t *testing.T) {
@@ -59,12 +60,11 @@ func TestAccresourceCurl(t *testing.T) {
 					resource.TestCheckResourceAttr("terracurl_request.basic", "destroy_headers.Content-Type", "application/json"),
 					resource.TestCheckResourceAttr("terracurl_request.basic", "destroy_request_body", RequestBody+"\n"),
 
-					//resource.TestCheckResourceAttr("terracurl_request.basic", "destroy_request_url_string", "https://example.com/destroy?id=12345&name=devopsrob"),
+					// resource.TestCheckResourceAttr("terracurl_request.basic", "destroy_request_url_string", "https://example.com/destroy?id=12345&name=devopsrob"),
 				),
 			},
 		},
 	})
-
 }
 
 func testAccresourceCurl(name string, requestBody string) string {
@@ -142,7 +142,6 @@ func TestAccresourceCurlDestroy(t *testing.T) {
 			},
 		},
 	})
-
 }
 
 func testAccresourceCurlDestroy(name string, requestBody string) string {
@@ -221,7 +220,6 @@ func TestAccresourceCurlSkipDestroy(t *testing.T) {
 			},
 		},
 	})
-
 }
 
 func testAccresourceCurlSkipDestroy(name string, requestBody string) string {
@@ -361,7 +359,6 @@ EOF
 
 }
 `, body)
-
 }
 
 func TestAccresourceCurlSkipRead(t *testing.T) {
@@ -393,7 +390,6 @@ func TestAccresourceCurlSkipRead(t *testing.T) {
 			},
 		},
 	})
-
 }
 
 func testAccresourceCurlSkipRead(name string, body string) string {
@@ -423,7 +419,6 @@ EOF
 
 }
 `, name, body)
-
 }
 
 func TestAccresourceCurlSkipReadNoReadFields(t *testing.T) {
@@ -500,7 +495,6 @@ func TestAccresourceCurlRead(t *testing.T) {
 			},
 		},
 	})
-
 }
 
 func testAccresourceCurlRead(name string, body string) string {
@@ -530,7 +524,6 @@ EOF
 
 }
 `, name, body)
-
 }
 
 func testAccresourceCurlTls(name, url, caCertFile, certFile, keyFile, readUrl, readCaCertFile, readCertFile, readKeyFile, destroyUrl, destroyCaCertFile, destroyCertFile, destroyKeyFile string) string {
@@ -575,7 +568,6 @@ resource "terracurl_request" "tls_test" {
 
 }
 `, name, url, caCertFile, certFile, keyFile, readUrl, readCaCertFile, readCertFile, readKeyFile, destroyUrl, destroyCaCertFile, destroyCertFile, destroyKeyFile)
-
 }
 
 func TestAccCurlResourceWithTLS(t *testing.T) {
@@ -598,7 +590,7 @@ func TestAccCurlResourceWithTLS(t *testing.T) {
 		t.Fatalf("failed to create TLS test server for Destroy operation: %v. Cert file: %s", err, certFile)
 	}
 
-	//fmt.Printf("CertFile: %s, KeyFile: %s\n", certFile, keyFile)
+	// fmt.Printf("CertFile: %s, KeyFile: %s\n", certFile, keyFile)
 	defer server.Close()
 	defer readServer.Close()
 	defer destroyServer.Close()
@@ -692,7 +684,6 @@ resource "terracurl_request" "tls_test" {
 
 }
 `, name, url, certFile, keyFile, readUrl, readCertFile, readKeyFile, destroyUrl, destroyCertFile, destroyKeyFile)
-
 }
 
 func TestAccCurlResourceWithTLSSkipVerify(t *testing.T) {
@@ -1239,7 +1230,7 @@ func TestCurlResource_StateUpgrade_EmptyDestroyParameters(t *testing.T) {
 		JSON: []byte(rawStateJSON),
 	}
 
-	// Use the actual resource schema for consistency  
+	// Use the actual resource schema for consistency
 	rUpgrade2 := &CurlResource{}
 	schemaResp2 := &resource2.SchemaResponse{}
 	rUpgrade2.Schema(ctx, resource2.SchemaRequest{}, schemaResp2)
@@ -1252,7 +1243,7 @@ func TestCurlResource_StateUpgrade_EmptyDestroyParameters(t *testing.T) {
 	}
 
 	req := resource2.UpgradeStateRequest{
-		State: &tfsdk.State{Schema: emptySchema2},
+		State:    &tfsdk.State{Schema: emptySchema2},
 		RawState: rawState,
 	}
 
