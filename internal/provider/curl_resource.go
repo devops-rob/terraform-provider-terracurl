@@ -5,6 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"strconv"
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -13,10 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"io"
-	"net/http"
-	"strconv"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -32,8 +33,10 @@ const (
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
-var _ resource.Resource = &CurlResource{}
-var _ resource.ResourceWithImportState = &CurlResource{}
+var (
+	_ resource.Resource                = &CurlResource{}
+	_ resource.ResourceWithImportState = &CurlResource{}
+)
 
 func NewCurlResource() resource.Resource {
 	return &CurlResource{}
@@ -594,10 +597,25 @@ func (r *CurlResource) Create(ctx context.Context, req resource.CreateRequest, r
 		}
 	}
 
+	// Sanitize the response to normalize JSON and apply ignore_response_fields,
+	// matching the same transformation that Read() applies.
+	var ignoredFields []string
+	for _, v := range data.IgnoreResponseFields.Elements() {
+		if strVal, ok := v.(types.String); ok {
+			ignoredFields = append(ignoredFields, strVal.ValueString())
+		}
+	}
+
+	sanitizedResponse, err := sanitizeResponse(bodyString, ignoredFields)
+	if err != nil {
+		resp.Diagnostics.AddError("Sanitize Error", fmt.Sprintf("Failed to sanitize response: %s", err))
+		return
+	}
+
 	data.DriftMarker = types.StringValue("initial")
 	data.DestroyRequestUrlString = types.StringValue(data.DestroyUrl.ValueString())
 	data.RequestUrlString = types.StringValue(request.URL.String())
-	data.Response = types.StringValue(bodyString)
+	data.Response = types.StringValue(sanitizedResponse)
 	data.StatusCode = types.StringValue(strconv.Itoa(statusCode))
 	diags := resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -952,17 +970,17 @@ func (r *CurlResource) UpgradeState(ctx context.Context) map[int64]resource.Stat
 
 				// The main issue is that v0 used "destroy_parameters" but v1 uses "destroy_request_parameters"
 				// We need to handle this attribute rename during the upgrade
-				
+
 				var oldState CurlResourceModel
-				
+
 				// First, try the normal state extraction
 				diags := req.State.Get(ctx, &oldState)
-				
+
 				if diags.HasError() {
 					tflog.Info(ctx, "Direct state extraction failed, attempting to extract values from raw state", map[string]interface{}{
 						"errors": diags.Errors(),
 					})
-					
+
 					// Try to extract what we can from the raw state
 					if req.RawState != nil && len(req.RawState.JSON) > 0 {
 						// Parse the raw JSON state
@@ -974,34 +992,34 @@ func (r *CurlResource) UpgradeState(ctx context.Context) map[int64]resource.Stat
 							resp.Diagnostics.AddError("State Upgrade Error", fmt.Sprintf("Failed to parse raw state: %s", err))
 							return
 						}
-						
+
 						tflog.Debug(ctx, "Successfully parsed raw state, extracting values")
-						
+
 						// Extract core values from raw state
 						if id, ok := rawStateMap["id"].(string); ok && id != "" {
 							oldState.Id = types.StringValue(id)
 						} else {
 							oldState.Id = types.StringUnknown()
 						}
-						
+
 						if name, ok := rawStateMap["name"].(string); ok && name != "" {
 							oldState.Name = types.StringValue(name)
 						} else {
 							oldState.Name = types.StringUnknown()
 						}
-						
+
 						if url, ok := rawStateMap["url"].(string); ok && url != "" {
 							oldState.Url = types.StringValue(url)
 						} else {
 							oldState.Url = types.StringUnknown()
 						}
-						
+
 						if method, ok := rawStateMap["method"].(string); ok && method != "" {
 							oldState.Method = types.StringValue(method)
 						} else {
 							oldState.Method = types.StringUnknown()
 						}
-						
+
 						// Extract optional string fields
 						oldState.RequestBody = extractStringFromRaw(rawStateMap, "request_body")
 						oldState.CertFile = extractStringFromRaw(rawStateMap, "cert_file")
@@ -1011,11 +1029,11 @@ func (r *CurlResource) UpgradeState(ctx context.Context) map[int64]resource.Stat
 						oldState.DestroyUrl = extractStringFromRaw(rawStateMap, "destroy_url")
 						oldState.DestroyMethod = extractStringFromRaw(rawStateMap, "destroy_method")
 						oldState.DestroyRequestBody = extractStringFromRaw(rawStateMap, "destroy_request_body")
-						
+
 						// Extract boolean fields
 						oldState.SkipTlsVerify = extractBoolFromRaw(rawStateMap, "skip_tls_verify")
 						oldState.SkipDestroy = extractBoolFromRaw(rawStateMap, "skip_destroy")
-						
+
 						// Extract int64 fields
 						oldState.RetryInterval = extractInt64FromRaw(rawStateMap, "retry_interval")
 						oldState.MaxRetry = extractInt64FromRaw(rawStateMap, "max_retry")
@@ -1023,12 +1041,12 @@ func (r *CurlResource) UpgradeState(ctx context.Context) map[int64]resource.Stat
 						oldState.DestroyRetryInterval = extractInt64FromRaw(rawStateMap, "destroy_retry_interval")
 						oldState.DestroyMaxRetry = extractInt64FromRaw(rawStateMap, "destroy_max_retry")
 						oldState.DestroyTimeout = extractInt64FromRaw(rawStateMap, "destroy_timeout")
-						
+
 						// Extract map fields
 						oldState.Headers = extractMapFromRaw(rawStateMap, "headers")
 						oldState.RequestParameters = extractMapFromRaw(rawStateMap, "request_parameters")
 						oldState.DestroyHeaders = extractMapFromRaw(rawStateMap, "destroy_headers")
-						
+
 						// Handle the key attribute rename: destroy_parameters -> destroy_request_parameters
 						if destroyParams := extractMapFromRaw(rawStateMap, "destroy_parameters"); !destroyParams.IsNull() {
 							oldState.DestroyRequestParameters = destroyParams
@@ -1036,25 +1054,25 @@ func (r *CurlResource) UpgradeState(ctx context.Context) map[int64]resource.Stat
 						} else {
 							oldState.DestroyRequestParameters = extractMapFromRaw(rawStateMap, "destroy_request_parameters")
 						}
-						
+
 						// Extract list fields
 						oldState.ResponseCodes = extractListFromRaw(rawStateMap, "response_codes")
 						oldState.DestroyResponseCodes = extractListFromRaw(rawStateMap, "destroy_response_codes")
 						oldState.IgnoreResponseFields = extractListFromRaw(rawStateMap, "ignore_response_fields")
-						
+
 						// Set remaining computed/null fields
 						oldState.RequestUrlString = types.StringNull()
 						oldState.Response = types.StringNull()
 						oldState.StatusCode = types.StringNull()
 						oldState.DestroyRequestUrlString = types.StringNull()
 						oldState.DriftMarker = types.StringNull()
-						
+
 					} else {
 						tflog.Error(ctx, "No raw state available for manual extraction")
 						resp.Diagnostics.AddError("State Upgrade Error", "No raw state available for manual extraction")
 						return
 					}
-					
+
 					// Clear the extraction errors since we handled them manually
 					resp.Diagnostics = diag.Diagnostics{}
 				}
@@ -1076,7 +1094,7 @@ func (r *CurlResource) UpgradeState(ctx context.Context) map[int64]resource.Stat
 				// Set the upgraded state
 				diags = resp.State.Set(ctx, oldState)
 				resp.Diagnostics.Append(diags...)
-				
+
 				if resp.Diagnostics.HasError() {
 					tflog.Error(ctx, "Failed to set upgraded state", map[string]interface{}{
 						"errors": resp.Diagnostics.Errors(),
