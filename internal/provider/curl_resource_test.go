@@ -644,7 +644,7 @@ func TestAccCurlResourceWithTLS(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccresourceCurlTls("tls_test", server.URL, certFile, certFile, keyFile, readServer.URL, readCertFile, readCertFile, readKeyFile, destroyServer.URL, destroyCertFile, destroyCertFile, destroyKeyFile),
-				Check:  resource.TestCheckResourceAttr("terracurl_request.tls_test", "response", `{"message": "TLS test successful"}`),
+				Check:  resource.TestCheckResourceAttr("terracurl_request.tls_test", "response", `{"message":"TLS test successful"}`),
 			},
 		},
 	})
@@ -760,10 +760,108 @@ func TestAccCurlResourceWithTLSSkipVerify(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccresourceCurlTlsSkipVerify("tls_test", server.URL, certFile, keyFile, readServer.URL, readCertFile, readKeyFile, destroyServer.URL, destroyCertFile, destroyKeyFile),
-				Check:  resource.TestCheckResourceAttr("terracurl_request.tls_test", "response", `{"message": "TLS test successful"}`),
+				Check:  resource.TestCheckResourceAttr("terracurl_request.tls_test", "response", `{"message":"TLS test successful"}`),
 			},
 		},
 	})
+}
+
+// TestAccresourceCurlCreateSanitizesResponse verifies that Create() normalizes
+// JSON responses the same way Read() does (via sanitizeResponse). Without this,
+// the response field differs between initial create and subsequent state refresh,
+// causing false drift detection.
+func TestAccresourceCurlCreateSanitizesResponse(t *testing.T) {
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	// Return JSON with keys in non-alphabetical order and extra whitespace.
+	// sanitizeResponse() normalizes this via JSON unmarshal/marshal (sorted keys, compact).
+	httpmock.RegisterResponder(
+		"POST",
+		"https://example.com/create",
+		httpmock.NewStringResponder(200, `{"zebra": "last", "alpha": "first"}`),
+	)
+
+	// After JSON round-trip through sanitizeResponse, keys are sorted alphabetically
+	// and formatting is compact.
+	expectedResponse := `{"alpha":"first","zebra":"last"}`
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccresourceCurlCreateSanitize(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("terracurl_request.sanitize_test", "response", expectedResponse),
+				),
+			},
+		},
+	})
+}
+
+func testAccresourceCurlCreateSanitize() string {
+	return `
+resource "terracurl_request" "sanitize_test" {
+  name           = "sanitize-test"
+  url            = "https://example.com/create"
+  method         = "POST"
+  request_body   = "{}"
+  response_codes = ["200"]
+  skip_destroy   = true
+}
+`
+}
+
+// TestAccresourceCurlCreateIgnoresResponseFields verifies that Create() applies
+// ignore_response_fields filtering, matching Read() behavior.
+func TestAccresourceCurlCreateIgnoresResponseFields(t *testing.T) {
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder(
+		"POST",
+		"https://example.com/create-ignore",
+		httpmock.NewStringResponder(200, `{"name":"keep","timestamp":"2026-01-01T00:00:00Z","request_id":"abc123"}`),
+	)
+
+	// After sanitization with ignore_response_fields = ["timestamp", "request_id"],
+	// only "name" should remain.
+	expectedResponse := `{"name":"keep"}`
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccresourceCurlCreateIgnoreFields(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("terracurl_request.ignore_test", "response", expectedResponse),
+				),
+			},
+		},
+	})
+}
+
+func testAccresourceCurlCreateIgnoreFields() string {
+	return `
+resource "terracurl_request" "ignore_test" {
+  name           = "ignore-fields-test"
+  url            = "https://example.com/create-ignore"
+  method         = "POST"
+  request_body   = "{}"
+  response_codes = ["200"]
+  skip_destroy   = true
+
+  ignore_response_fields = ["timestamp", "request_id"]
+}
+`
 }
 
 func testMockEndpointCount(endpoint string, expected int) resource.TestCheckFunc {

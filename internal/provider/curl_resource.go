@@ -594,10 +594,25 @@ func (r *CurlResource) Create(ctx context.Context, req resource.CreateRequest, r
 		}
 	}
 
+	// Sanitize the response to normalize JSON and apply ignore_response_fields,
+	// matching the same transformation that Read() applies.
+	var ignoredFields []string
+	for _, v := range data.IgnoreResponseFields.Elements() {
+		if strVal, ok := v.(types.String); ok {
+			ignoredFields = append(ignoredFields, strVal.ValueString())
+		}
+	}
+
+	sanitizedResponse, err := sanitizeResponse(bodyString, ignoredFields)
+	if err != nil {
+		resp.Diagnostics.AddError("Sanitize Error", fmt.Sprintf("Failed to sanitize response: %s", err))
+		return
+	}
+
 	data.DriftMarker = types.StringValue("initial")
 	data.DestroyRequestUrlString = types.StringValue(data.DestroyUrl.ValueString())
 	data.RequestUrlString = types.StringValue(request.URL.String())
-	data.Response = types.StringValue(bodyString)
+	data.Response = types.StringValue(sanitizedResponse)
 	data.StatusCode = types.StringValue(strconv.Itoa(statusCode))
 	diags := resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
