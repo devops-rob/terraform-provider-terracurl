@@ -5,17 +5,26 @@ package provider
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/hex"
+	"encoding/pem"
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-testing/echoprovider"
 	"log"
+	"math/big"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
@@ -34,70 +43,112 @@ var testAccProtoV6ProviderFactoriesWithEcho = map[string]func() (tfprotov6.Provi
 	"echo":      echoprovider.NewProviderServer(),
 }
 
-const localCert = `-----BEGIN CERTIFICATE-----
-MIICnDCCAkOgAwIBAgIRAJ7vRKfNUfgTzPf3A2usN5MwCgYIKoZIzj0EAwIwgbkx
-CzAJBgNVBAYTAlVTMQswCQYDVQQIEwJDQTEWMBQGA1UEBxMNU2FuIEZyYW5jaXNj
-bzEaMBgGA1UECRMRMTAxIFNlY29uZCBTdHJlZXQxDjAMBgNVBBETBTk0MTA1MRcw
-FQYDVQQKEw5IYXNoaUNvcnAgSW5jLjFAMD4GA1UEAxM3Q29uc3VsIEFnZW50IENB
-IDE3OTE0MzkwMDM4OTUwMjI2MjM2Njc1OTk3NzcwNTA5NjcxNjY5MzAeFw0yNTAy
-MjcxMzMxMDVaFw0yNjAyMjcxMzMxMDVaMBwxGjAYBgNVBAMTEXNlcnZlci5kYzEu
-Y29uc3VsMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEjLj2Ay/hhLhJ1cC5Rp7/
-bkucDS+MrS8Te7HpXmQJAQt4DsMWbP9KJ9dc0LcE8rTwitkoLiTtjMl/y9J+I6jq
-H6OBxzCBxDAOBgNVHQ8BAf8EBAMCBaAwHQYDVR0lBBYwFAYIKwYBBQUHAwEGCCsG
-AQUFBwMCMAwGA1UdEwEB/wQCMAAwKQYDVR0OBCIEIC31ZCjRSd188aHLNsUi6z25
-Dm0CsyHqBhCZ/1Xak9+RMCsGA1UdIwQkMCKAIKEBxmHeTfADtdpbF1Sww30JXIln
-rYqEyg+0PDbZW6yXMC0GA1UdEQQmMCSCEXNlcnZlci5kYzEuY29uc3Vsgglsb2Nh
-bGhvc3SHBH8AAAEwCgYIKoZIzj0EAwIDRwAwRAIgI3d9t7SOR9RaTrnFWGh+igXE
-4bZYvsUcWL2V9mA5T3MCIFH7XfGUEwuviYHt6Py1X9yaI5lcRxjgSOkFMMIsoY01
------END CERTIFICATE-----`
+// generateTestCert generates a self-signed TLS certificate and private key dynamically
+// for testing purposes. This eliminates certificate expiration issues and removes the
+// need to store test certificates in the codebase.
+//
+// The certificate is valid for 24 hours from generation time and includes:
+//   - Subject: server.dc1.consul
+//   - SANs: server.dc1.consul, localhost, 127.0.0.1
+//   - Key: ECDSA P-256 (faster than RSA for tests)
+//
+// Returns PEM-encoded certificate and key as byte slices.
+func generateTestCert() (certPEM, keyPEM []byte, err error) {
+	// Generate ECDSA private key (P-256 curve)
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to generate private key: %w", err)
+	}
 
-// Mock private key for TLS server.
-const localKey = `-----BEGIN EC PRIVATE KEY-----
-MHcCAQEEIHa08Nf/lf7KXSMcRwnhNOI5rpJsykbo4ZGImsZndeHYoAoGCCqGSM49
-AwEHoUQDQgAEjLj2Ay/hhLhJ1cC5Rp7/bkucDS+MrS8Te7HpXmQJAQt4DsMWbP9K
-J9dc0LcE8rTwitkoLiTtjMl/y9J+I6jqHw==
------END EC PRIVATE KEY-----`
+	// Create certificate template
+	notBefore := time.Now().Add(-1 * time.Hour) // Handle clock skew
+	notAfter := notBefore.Add(24 * time.Hour)   // Valid for 24 hours
+
+	serialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to generate serial number: %w", err)
+	}
+
+	template := &x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			Organization:  []string{"HashiCorp Inc."},
+			Country:       []string{"US"},
+			Province:      []string{"CA"},
+			Locality:      []string{"San Francisco"},
+			StreetAddress: []string{"101 Second Street"},
+			PostalCode:    []string{"94105"},
+			CommonName:    "server.dc1.consul",
+		},
+		NotBefore:             notBefore,
+		NotAfter:              notAfter,
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		DNSNames:              []string{"server.dc1.consul", "localhost"},
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
+	}
+
+	// Create self-signed certificate
+	certDER, err := x509.CreateCertificate(rand.Reader, template, template, &priv.PublicKey, priv)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create certificate: %w", err)
+	}
+
+	// PEM encode certificate
+	certPEM = pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: certDER,
+	})
+
+	// PEM encode private key
+	privBytes, err := x509.MarshalECPrivateKey(priv)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to marshal private key: %w", err)
+	}
+
+	keyPEM = pem.EncodeToMemory(&pem.Block{
+		Type:  "EC PRIVATE KEY",
+		Bytes: privBytes,
+	})
+
+	return certPEM, keyPEM, nil
+}
 
 func createTLSServer() (*httptest.Server, string, string, error) {
 	log.Println("createTLSServer() called...")
 
-	// Save cert & key to temp files.
-	certFile, err := saveTempFile([]byte(localCert))
+	// Generate fresh TLS certificate and key programmatically
+	certPEM, keyPEM, err := generateTestCert()
+	if err != nil {
+		log.Printf("Failed to generate test certificate: %v\n", err)
+		return nil, "", "", err
+	}
+
+	// Save cert & key to temp files (still needed for tests that expect file paths)
+	certFile, err := saveTempFile(certPEM)
 	if err != nil {
 		log.Printf("Failed to create cert file: %v\n", err)
 		return nil, "", "", err
 	}
 
-	keyFile, err := saveTempFile([]byte(localKey))
+	keyFile, err := saveTempFile(keyPEM)
 	if err != nil {
 		log.Printf("Failed to create key file: %v\n", err)
 		return nil, "", "", err
 	}
 
-	// Read and print file contents.
-	certContent, err := os.ReadFile(certFile)
-	if err != nil {
-		log.Printf("Failed to read cert file: %v\n", err)
-		return nil, "", "", err
-	}
+	log.Printf("Generated certificate saved to: %s\n", certFile)
+	log.Printf("Generated private key saved to: %s\n", keyFile)
 
-	keyContent, err := os.ReadFile(keyFile)
-	if err != nil {
-		log.Printf("Failed to read key file: %v\n", err)
-		return nil, "", "", err
-	}
+	// Log certificate details for debugging
+	certHex := hex.EncodeToString(certPEM)
+	keyHex := hex.EncodeToString(keyPEM)
+	log.Printf("Cert hex (first 100 chars): %s...\n", certHex[:min(100, len(certHex))])
+	log.Printf("Key hex (first 100 chars): %s...\n", keyHex[:min(100, len(keyHex))])
 
-	log.Printf("Cert file content:\n%s", string(certContent))
-	log.Printf("Key file content:\n%s", string(keyContent))
-
-	certHex := hex.EncodeToString(certContent)
-	keyHex := hex.EncodeToString(keyContent)
-
-	log.Printf("Cert file hex:\n%s", certHex)
-	log.Printf("Key file hex:\n%s", keyHex)
-
-	// Load the TLS key pair.
-	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	// Parse the PEM-encoded certificate and key directly
+	cert, err := tls.X509KeyPair(certPEM, keyPEM)
 	if err != nil {
 		log.Printf("Failed to load X509KeyPair: %v\n", err)
 		return nil, "", "", err
@@ -105,7 +156,7 @@ func createTLSServer() (*httptest.Server, string, string, error) {
 
 	log.Println("TLS key pair loaded successfully!")
 
-	// Create test TLS server.
+	// Create test TLS server
 	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, err := w.Write([]byte(`{"message": "TLS test successful"}`))
@@ -123,6 +174,14 @@ func createTLSServer() (*httptest.Server, string, string, error) {
 	log.Println("TLS server started successfully!")
 
 	return server, certFile, keyFile, nil
+}
+
+// min returns the minimum of two integers (helper for Go versions < 1.21)
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func saveTempFile(data []byte) (string, error) {
