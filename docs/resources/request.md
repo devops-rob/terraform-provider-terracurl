@@ -58,6 +58,7 @@ TerraCurl request resource
 - `read_url` (String) API endpoint for reading resource state. Required if `skip_read` is false.
 - `request_body` (String) A request body to attach to the API call
 - `request_parameters` (Map of String) Map of parameters to attach to the API call
+- `response_sensitive` (Boolean) Set to `true` to treat the response as sensitive. When enabled, the response body is written to `sensitive_response` (a sensitive attribute) and `response` is left empty so that secret values are not displayed in plan output. Defaults to `false` to preserve existing behavior.
 - `retry_interval` (Number) Interval between each attempt
 - `skip_destroy` (Boolean) Set this to true to skip issuing a request when the resource is being destroyed
 - `skip_read` (Boolean) Set to true to skip the read operation (no drift detection). Defaults to true.
@@ -70,5 +71,6 @@ TerraCurl request resource
 - `drift_marker` (String) Marker to track state drift and trigger resource replacement
 - `id` (String) Example identifier
 - `request_url_string` (String) Request URL includes parameters if request specified
-- `response` (String) JSON response received from request
+- `response` (String) JSON response received from request. Empty when `response_sensitive` is `true`; use `sensitive_response` instead.
+- `sensitive_response` (String, Sensitive) JSON response received from request, marked as sensitive so it is not displayed in plan output. Populated only when `response_sensitive` is `true`.
 - `status_code` (String) Response status code received from request
