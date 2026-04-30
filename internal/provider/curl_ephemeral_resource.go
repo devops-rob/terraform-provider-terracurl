@@ -1035,9 +1035,10 @@ func (e *EphemeralCurlResource) Renew(ctx context.Context, req ephemeral.RenewRe
 	// Perform external call to renew "thing" data
 
 	var client *http.Client
-	useTls := !(privateData.RenewCertFile.IsNull() || privateData.RenewCertFile.ValueString() == "") ||
-		!(privateData.RenewKeyFile.IsNull() || privateData.RenewKeyFile.ValueString() == "") ||
-		!(privateData.RenewCaCertFile.IsNull() || privateData.RenewCaCertFile.ValueString() == "")
+
+	useTls := (!privateData.RenewCertFile.IsNull() && privateData.RenewCertFile.ValueString() != "") ||
+		(!privateData.RenewKeyFile.IsNull() && privateData.RenewKeyFile.ValueString() != "") ||
+		(!privateData.RenewCaCertFile.IsNull() && privateData.RenewCaCertFile.ValueString() != "")
 
 	if useTls {
 		tflog.Debug(ctx, "using TLS client for renew call")
@@ -1397,9 +1398,9 @@ func (e *EphemeralCurlResource) Close(ctx context.Context, req ephemeral.CloseRe
 	}
 
 	var client *http.Client
-	useCloseTls := !(privateData.CloseCertFile.IsNull() || privateData.CloseCertFile.ValueString() == "") ||
-		!(privateData.CloseKeyFile.IsNull() || privateData.CloseKeyFile.ValueString() == "") ||
-		!(privateData.CloseCaCertFile.IsNull() || privateData.CloseCaCertFile.ValueString() == "")
+	useCloseTls := hasValue(privateData.CloseCertFile) ||
+		hasValue(privateData.CloseKeyFile) ||
+		hasValue(privateData.CloseCaCertFile)
 
 	if useCloseTls {
 		tflog.Debug(ctx, "Using custom TLS client for Close() operation")

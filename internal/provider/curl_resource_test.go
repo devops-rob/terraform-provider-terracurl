@@ -926,7 +926,7 @@ func TestCurlResource_StateUpgrade(t *testing.T) {
 	}
 }
 
-// TestCurlResource_StateUpgrade_WithDestroyParameters tests the migration from destroy_parameters to destroy_request_parameters
+// TestCurlResource_StateUpgrade_WithDestroyParameters tests the migration from destroy_parameters to destroy_request_parameters.
 func TestCurlResource_StateUpgrade_WithDestroyParameters(t *testing.T) {
 	ctx := context.Background()
 	r := &CurlResource{}
@@ -1035,10 +1035,12 @@ func TestCurlResource_StateUpgrade_WithDestroyParameters(t *testing.T) {
 		t.Error("Expected destroy_request_parameters to be populated from destroy_parameters")
 	} else {
 		destroyParams := upgradedState.DestroyRequestParameters.Elements()
-		if roleId, ok := destroyParams["role_id"]; !ok || roleId.(types.String).ValueString() != "12345" {
+
+		if roleID, ok := destroyParams["role_id"].(types.String); !ok || roleID.ValueString() != "12345" {
 			t.Error("Expected destroy_request_parameters to contain role_id='12345'")
 		}
-		if force, ok := destroyParams["force"]; !ok || force.(types.String).ValueString() != "true" {
+
+		if force, ok := destroyParams["force"].(types.String); !ok || force.ValueString() != "true" {
 			t.Error("Expected destroy_request_parameters to contain force='true'")
 		}
 	}
@@ -1048,7 +1050,7 @@ func TestCurlResource_StateUpgrade_WithDestroyParameters(t *testing.T) {
 		t.Error("Expected headers to be preserved")
 	} else {
 		headers := upgradedState.Headers.Elements()
-		if auth, ok := headers["Authorization"]; !ok || auth.(types.String).ValueString() != "Bearer token" {
+		if auth, ok := headers["Authorization"].(types.String); !ok || auth.ValueString() != "Bearer token" {
 			t.Error("Expected headers to contain Authorization='Bearer token'")
 		}
 	}
@@ -1057,7 +1059,7 @@ func TestCurlResource_StateUpgrade_WithDestroyParameters(t *testing.T) {
 		t.Error("Expected request_parameters to be preserved")
 	} else {
 		reqParams := upgradedState.RequestParameters.Elements()
-		if db, ok := reqParams["database"]; !ok || db.(types.String).ValueString() != "test_db" {
+		if db, ok := reqParams["database"].(types.String); !ok || db.ValueString() != "test_db" {
 			t.Error("Expected request_parameters to contain database='test_db'")
 		}
 	}
@@ -1117,7 +1119,7 @@ func TestCurlResource_StateUpgrade_WithDestroyParameters(t *testing.T) {
 	}
 }
 
-// TestCurlResource_StateUpgrade_EmptyDestroyParameters tests handling of null destroy_parameters
+// TestCurlResource_StateUpgrade_EmptyDestroyParameters tests handling of null destroy_parameters.
 func TestCurlResource_StateUpgrade_EmptyDestroyParameters(t *testing.T) {
 	ctx := context.Background()
 	r := &CurlResource{}
@@ -1141,7 +1143,7 @@ func TestCurlResource_StateUpgrade_EmptyDestroyParameters(t *testing.T) {
 		JSON: []byte(rawStateJSON),
 	}
 
-	// Use the actual resource schema for consistency  
+	// Use the actual resource schema for consistency
 	rUpgrade2 := &CurlResource{}
 	schemaResp2 := &resource2.SchemaResponse{}
 	rUpgrade2.Schema(ctx, resource2.SchemaRequest{}, schemaResp2)
@@ -1154,7 +1156,7 @@ func TestCurlResource_StateUpgrade_EmptyDestroyParameters(t *testing.T) {
 	}
 
 	req := resource2.UpgradeStateRequest{
-		State: &tfsdk.State{Schema: emptySchema2},
+		State:    &tfsdk.State{Schema: emptySchema2},
 		RawState: rawState,
 	}
 
