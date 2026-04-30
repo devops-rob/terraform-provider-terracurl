@@ -43,13 +43,6 @@ var testAccProtoV6ProviderFactoriesWithEcho = map[string]func() (tfprotov6.Provi
 	"echo":      echoprovider.NewProviderServer(),
 }
 
-// Mock private key for TLS server.
-const localKey = `-----BEGIN EC PRIVATE KEY-----
-MHcCAQEEIHa08Nf/lf7KXSMcRwnhNOI5rpJsykbo4ZGImsZndeHYoAoGCCqGSM49
-AwEHoUQDQgAEjLj2Ay/hhLhJ1cC5Rp7/bkucDS+MrS8Te7HpXmQJAQt4DsMWbP9K
-J9dc0LcE8rTwitkoLiTtjMl/y9J+I6jqHw==
------END EC PRIVATE KEY-----`
-
 func createTLSServer() (*httptest.Server, string, string, error) {
 	log.Println("createTLSServer() called...")
 
@@ -209,7 +202,7 @@ func getTerraformVersion() (string, error) {
 	return "", fmt.Errorf("could not determine Terraform version")
 }
 
-// Run this function inside tests that should be skipped for Terraform <1.10
+// Run this function inside tests that should be skipped for Terraform <1.10.
 func skipIfTerraformIsLegacy(t *testing.T) {
 	tfVersion, err := getTerraformVersion()
 	if err != nil {
