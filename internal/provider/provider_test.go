@@ -5,17 +5,26 @@ package provider
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/hex"
+	"encoding/pem"
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-testing/echoprovider"
 	"log"
+	"math/big"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
@@ -34,23 +43,6 @@ var testAccProtoV6ProviderFactoriesWithEcho = map[string]func() (tfprotov6.Provi
 	"echo":      echoprovider.NewProviderServer(),
 }
 
-const localCert = `-----BEGIN CERTIFICATE-----
-MIICnDCCAkOgAwIBAgIRAJ7vRKfNUfgTzPf3A2usN5MwCgYIKoZIzj0EAwIwgbkx
-CzAJBgNVBAYTAlVTMQswCQYDVQQIEwJDQTEWMBQGA1UEBxMNU2FuIEZyYW5jaXNj
-bzEaMBgGA1UECRMRMTAxIFNlY29uZCBTdHJlZXQxDjAMBgNVBBETBTk0MTA1MRcw
-FQYDVQQKEw5IYXNoaUNvcnAgSW5jLjFAMD4GA1UEAxM3Q29uc3VsIEFnZW50IENB
-IDE3OTE0MzkwMDM4OTUwMjI2MjM2Njc1OTk3NzcwNTA5NjcxNjY5MzAeFw0yNTAy
-MjcxMzMxMDVaFw0yNjAyMjcxMzMxMDVaMBwxGjAYBgNVBAMTEXNlcnZlci5kYzEu
-Y29uc3VsMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEjLj2Ay/hhLhJ1cC5Rp7/
-bkucDS+MrS8Te7HpXmQJAQt4DsMWbP9KJ9dc0LcE8rTwitkoLiTtjMl/y9J+I6jq
-H6OBxzCBxDAOBgNVHQ8BAf8EBAMCBaAwHQYDVR0lBBYwFAYIKwYBBQUHAwEGCCsG
-AQUFBwMCMAwGA1UdEwEB/wQCMAAwKQYDVR0OBCIEIC31ZCjRSd188aHLNsUi6z25
-Dm0CsyHqBhCZ/1Xak9+RMCsGA1UdIwQkMCKAIKEBxmHeTfADtdpbF1Sww30JXIln
-rYqEyg+0PDbZW6yXMC0GA1UdEQQmMCSCEXNlcnZlci5kYzEuY29uc3Vsgglsb2Nh
-bGhvc3SHBH8AAAEwCgYIKoZIzj0EAwIDRwAwRAIgI3d9t7SOR9RaTrnFWGh+igXE
-4bZYvsUcWL2V9mA5T3MCIFH7XfGUEwuviYHt6Py1X9yaI5lcRxjgSOkFMMIsoY01
------END CERTIFICATE-----`
-
 // Mock private key for TLS server.
 const localKey = `-----BEGIN EC PRIVATE KEY-----
 MHcCAQEEIHa08Nf/lf7KXSMcRwnhNOI5rpJsykbo4ZGImsZndeHYoAoGCCqGSM49
@@ -62,15 +54,19 @@ func createTLSServer() (*httptest.Server, string, string, error) {
 	log.Println("createTLSServer() called...")
 
 	// Save cert & key to temp files.
-	certFile, err := saveTempFile([]byte(localCert))
+
+	certPEM, keyPEM, err := generateTestCert()
 	if err != nil {
-		log.Printf("Failed to create cert file: %v\n", err)
 		return nil, "", "", err
 	}
 
-	keyFile, err := saveTempFile([]byte(localKey))
+	certFile, err := saveTempFile(certPEM)
 	if err != nil {
-		log.Printf("Failed to create key file: %v\n", err)
+		return nil, "", "", err
+	}
+
+	keyFile, err := saveTempFile(keyPEM)
+	if err != nil {
 		return nil, "", "", err
 	}
 
@@ -233,4 +229,55 @@ func skipIfTerraformIsLegacy(t *testing.T) {
 		strings.HasPrefix(tfVersion, "1.9.") {
 		t.Skip("Skipping test: Terraform version <1.10 detected")
 	}
+}
+
+func generateTestCert() ([]byte, []byte, error) {
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	serialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	template := x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			CommonName: "localhost",
+		},
+		NotBefore: time.Now().Add(-1 * time.Hour),
+		NotAfter:  time.Now().Add(24 * time.Hour),
+
+		KeyUsage: x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage: []x509.ExtKeyUsage{
+			x509.ExtKeyUsageServerAuth,
+		},
+
+		DNSNames:    []string{"localhost"},
+		IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+	}
+
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	certPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: derBytes,
+	})
+
+	keyBytes, err := x509.MarshalECPrivateKey(priv)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	keyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "EC PRIVATE KEY",
+		Bytes: keyBytes,
+	})
+
+	return certPEM, keyPEM, nil
 }
