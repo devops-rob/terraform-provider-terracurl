@@ -63,6 +63,8 @@ type CurlResourceModel struct {
 	MaxRetry                 types.Int64  `tfsdk:"max_retry"`
 	Timeout                  types.Int64  `tfsdk:"timeout"`
 	Response                 types.String `tfsdk:"response"`
+	SensitiveResponse        types.String `tfsdk:"sensitive_response"`
+	ResponseSensitive        types.Bool   `tfsdk:"response_sensitive"`
 	ResponseCodes            types.List   `tfsdk:"response_codes"`
 	StatusCode               types.String `tfsdk:"status_code"`
 	SkipDestroy              types.Bool   `tfsdk:"skip_destroy"`
@@ -212,7 +214,18 @@ func (r *CurlResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 			},
 			"response": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "JSON response received from request",
+				MarkdownDescription: "JSON response received from request. Empty when `response_sensitive` is `true`; use `sensitive_response` instead.",
+			},
+			"sensitive_response": schema.StringAttribute{
+				Computed:            true,
+				Sensitive:           true,
+				MarkdownDescription: "JSON response received from request, marked as sensitive so it is not displayed in plan output. Populated only when `response_sensitive` is `true`.",
+			},
+			"response_sensitive": schema.BoolAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Set to `true` to treat the response as sensitive. When enabled, the response body is written to `sensitive_response` (a sensitive attribute) and `response` is left empty so that secret values are not displayed in plan output. Defaults to `false` to preserve existing behavior.",
+				Default:             booldefault.StaticBool(false),
 			},
 			"response_codes": schema.ListAttribute{
 				Required:            true,
@@ -597,10 +610,24 @@ func (r *CurlResource) Create(ctx context.Context, req resource.CreateRequest, r
 	data.DriftMarker = types.StringValue("initial")
 	data.DestroyRequestUrlString = types.StringValue(data.DestroyUrl.ValueString())
 	data.RequestUrlString = types.StringValue(request.URL.String())
-	data.Response = types.StringValue(bodyString)
+	setResponseValues(&data, bodyString)
 	data.StatusCode = types.StringValue(strconv.Itoa(statusCode))
 	diags := resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
+}
+
+// setResponseValues writes the response body to either `response` or
+// `sensitive_response` based on the value of `response_sensitive`. The
+// unused attribute is always set to an empty string so that Terraform
+// does not report it as unknown.
+func setResponseValues(data *CurlResourceModel, body string) {
+	if data.ResponseSensitive.ValueBool() {
+		data.Response = types.StringValue("")
+		data.SensitiveResponse = types.StringValue(body)
+	} else {
+		data.Response = types.StringValue(body)
+		data.SensitiveResponse = types.StringValue("")
+	}
 }
 
 func (r *CurlResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -720,8 +747,14 @@ func (r *CurlResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
-	// Compare old and new sanitized responses
-	oldSanitized, err := sanitizeResponse(data.Response.ValueString(), ignoredFields)
+	// Compare old and new sanitized responses. The prior response is
+	// stored in whichever attribute matches the current `response_sensitive`
+	// setting.
+	priorResponse := data.Response.ValueString()
+	if data.ResponseSensitive.ValueBool() {
+		priorResponse = data.SensitiveResponse.ValueString()
+	}
+	oldSanitized, err := sanitizeResponse(priorResponse, ignoredFields)
 	if err != nil {
 		resp.Diagnostics.AddError("Sanitize Error", fmt.Sprintf("Failed to sanitize prior response: %s", err))
 		return
@@ -738,8 +771,8 @@ func (r *CurlResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		}
 	}
 
-	// Store the new sanitized response
-	data.Response = types.StringValue(sanitizedResponse)
+	// Store the new sanitized response in the appropriate attribute.
+	setResponseValues(&data, sanitizedResponse)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -906,7 +939,7 @@ func (r *CurlResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 
 	data.DestroyRequestUrlString = types.StringValue(data.DestroyUrl.ValueString())
 	data.RequestUrlString = types.StringValue(request.URL.String())
-	data.Response = types.StringValue(string(bodyBytes))
+	setResponseValues(&data, string(bodyBytes))
 	data.StatusCode = types.StringValue(strconv.Itoa(statusCode))
 
 	// Remove Resource from State
@@ -1057,6 +1090,16 @@ func (r *CurlResource) UpgradeState(ctx context.Context) map[int64]resource.Stat
 
 					// Clear the extraction errors since we handled them manually
 					resp.Diagnostics = diag.Diagnostics{}
+				}
+
+				// New fields introduced after v0: default response_sensitive
+				// to false and leave sensitive_response empty. This preserves
+				// the prior non-sensitive response behavior on upgrade.
+				if oldState.ResponseSensitive.IsNull() || oldState.ResponseSensitive.IsUnknown() {
+					oldState.ResponseSensitive = types.BoolValue(false)
+				}
+				if oldState.SensitiveResponse.IsNull() || oldState.SensitiveResponse.IsUnknown() {
+					oldState.SensitiveResponse = types.StringValue("")
 				}
 
 				// The key change in v1: set skip_read to true and clear read-related fields
