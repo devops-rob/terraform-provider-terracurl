@@ -133,3 +133,7 @@ func convertStringMapToTFValues(input map[string]string) map[string]attr.Value {
 	}
 	return result
 }
+
+func hasValue(s types.String) bool {
+	return !s.IsNull() && s.ValueString() != ""
+}

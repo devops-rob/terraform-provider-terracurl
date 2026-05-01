@@ -39,10 +39,10 @@ jobs:
       - run: go mod download
       - run: go build -v .
       - name: Run linters
-        uses: golangci/golangci-lint-action@3cfe3a4abbb849e10058ce4af15d205b6da42804 # v4.0.0
+        uses: golangci/golangci-lint-action@v8
         with:
-          version: latest
-          args: --out-format=colored-line-number --timeout=5m --disable exportloopref,tenv,vet --config=/dev/null
+          version: v2.4.0
+          args: --timeout=5m --config=.golangci.yml
 
   generate:
     runs-on: ubuntu-latest
@@ -54,7 +54,7 @@ jobs:
           cache: false
       # Temporarily download Terraform 1.8 prerelease for function documentation support.
       # When Terraform 1.8.0 final is released, this can be removed.
-      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+      - uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
         with:
           terraform_version: '1.10.5'
           terraform_wrapper: false
@@ -90,7 +90,7 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: false
-      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+      - uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
         with:
           terraform_version: ${{ matrix.terraform }}
           terraform_wrapper: false
