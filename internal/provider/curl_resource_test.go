@@ -644,7 +644,7 @@ func TestAccCurlResourceWithTLS(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccresourceCurlTls("tls_test", server.URL, certFile, certFile, keyFile, readServer.URL, readCertFile, readCertFile, readKeyFile, destroyServer.URL, destroyCertFile, destroyCertFile, destroyKeyFile),
-				Check:  resource.TestCheckResourceAttr("terracurl_request.tls_test", "response", `{"message": "TLS test successful"}`),
+				Check:  resource.TestCheckResourceAttr("terracurl_request.tls_test", "response", `{"message":"TLS test successful"}`),
 			},
 		},
 	})
@@ -760,10 +760,188 @@ func TestAccCurlResourceWithTLSSkipVerify(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccresourceCurlTlsSkipVerify("tls_test", server.URL, certFile, keyFile, readServer.URL, readCertFile, readKeyFile, destroyServer.URL, destroyCertFile, destroyKeyFile),
-				Check:  resource.TestCheckResourceAttr("terracurl_request.tls_test", "response", `{"message": "TLS test successful"}`),
+				Check:  resource.TestCheckResourceAttr("terracurl_request.tls_test", "response", `{"message":"TLS test successful"}`),
 			},
 		},
 	})
+}
+
+func TestAccresourceCurlCreateSanitizesResponse(t *testing.T) {
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder(
+		"POST",
+		"https://example.com/create",
+		httpmock.NewStringResponder(200, `{"zebra": "last", "alpha": "first"}`),
+	)
+
+	expectedResponse := `{"alpha":"first","zebra":"last"}`
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccresourceCurlCreateSanitize(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("terracurl_request.sanitize_test", "response", expectedResponse),
+				),
+			},
+		},
+	})
+}
+
+func testAccresourceCurlCreateSanitize() string {
+	return `
+resource "terracurl_request" "sanitize_test" {
+  name           = "sanitize-test"
+  url            = "https://example.com/create"
+  method         = "POST"
+  request_body   = "{}"
+  response_codes = ["200"]
+  skip_destroy   = true
+}
+`
+}
+
+func TestAccresourceCurlCreateIgnoresResponseFields(t *testing.T) {
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	httpmock.RegisterResponder(
+		"POST",
+		"https://example.com/create-ignore",
+		httpmock.NewStringResponder(200, `{"name":"keep","timestamp":"2026-01-01T00:00:00Z","request_id":"abc123"}`),
+	)
+
+	expectedResponse := `{"name":"keep"}`
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccresourceCurlCreateIgnoreFields(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("terracurl_request.ignore_test", "response", expectedResponse),
+				),
+			},
+		},
+	})
+}
+
+func testAccresourceCurlCreateIgnoreFields() string {
+	return `
+resource "terracurl_request" "ignore_test" {
+  name           = "ignore-fields-test"
+  url            = "https://example.com/create-ignore"
+  method         = "POST"
+  request_body   = "{}"
+  response_codes = ["200"]
+  skip_destroy   = true
+
+  ignore_response_fields = ["timestamp", "request_id"]
+}
+`
+}
+
+func TestAccresourceCurlResponseSensitive(t *testing.T) {
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	secretBody := `{"token": "super-secret-token", "key": "key-1234"}`
+	expectedResponse := `{"key":"key-1234","token":"super-secret-token"}`
+	httpmock.RegisterResponder(
+		"POST",
+		"https://example.com/keys",
+		httpmock.NewStringResponder(200, secretBody),
+	)
+
+	rName := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccresourceCurlResponseSensitive(rName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("terracurl_request.sensitive", "response_sensitive", "true"),
+					resource.TestCheckResourceAttr("terracurl_request.sensitive", "response", ""),
+					resource.TestCheckResourceAttr("terracurl_request.sensitive", "sensitive_response", expectedResponse),
+					resource.TestCheckResourceAttr("terracurl_request.sensitive", "status_code", "200"),
+				),
+			},
+		},
+	})
+}
+
+func testAccresourceCurlResponseSensitive(name string) string {
+	return fmt.Sprintf(`
+resource "terracurl_request" "sensitive" {
+  name               = "%s"
+  url                = "https://example.com/keys"
+  method             = "POST"
+  response_codes     = ["200"]
+  response_sensitive = true
+  skip_destroy       = true
+  skip_read          = true
+}`, name)
+}
+
+func TestAccresourceCurlResponseSensitiveDefault(t *testing.T) {
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	body := `{"message": "ok"}`
+	expectedResponse := `{"message":"ok"}`
+	httpmock.RegisterResponder(
+		"GET",
+		"https://example.com/default",
+		httpmock.NewStringResponder(200, body),
+	)
+
+	rName := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccresourceCurlResponseSensitiveDefault(rName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("terracurl_request.default", "response_sensitive", "false"),
+					resource.TestCheckResourceAttr("terracurl_request.default", "response", expectedResponse),
+					resource.TestCheckResourceAttr("terracurl_request.default", "sensitive_response", ""),
+				),
+			},
+		},
+	})
+}
+
+func testAccresourceCurlResponseSensitiveDefault(name string) string {
+	return fmt.Sprintf(`
+resource "terracurl_request" "default" {
+  name           = "%s"
+  url            = "https://example.com/default"
+  method         = "GET"
+  response_codes = ["200"]
+  skip_destroy   = true
+  skip_read      = true
+}`, name)
 }
 
 func testMockEndpointCount(endpoint string, expected int) resource.TestCheckFunc {
@@ -815,6 +993,8 @@ func TestCurlResource_StateUpgrade(t *testing.T) {
 			"response_codes":         schema.ListAttribute{ElementType: types.StringType, Optional: true},
 			"status_code":            schema.StringAttribute{Computed: true},
 			"response":               schema.StringAttribute{Computed: true},
+			"sensitive_response":     schema.StringAttribute{Computed: true, Sensitive: true},
+			"response_sensitive":     schema.BoolAttribute{Optional: true, Computed: true},
 			"request_url_string":     schema.StringAttribute{Computed: true},
 			"max_retry":              schema.Int64Attribute{Optional: true},
 			"retry_interval":         schema.Int64Attribute{Optional: true},
@@ -1116,6 +1296,165 @@ func TestCurlResource_StateUpgrade_WithDestroyParameters(t *testing.T) {
 
 	if !upgradedState.ReadResponseCodes.IsNull() {
 		t.Error("Expected read_response_codes to be null in v1 upgrade")
+	}
+}
+
+// TestCurlResource_Read_ResponseSensitiveToggle tests that drift detection correctly
+// handles the case where response_sensitive changes between operations.
+func TestCurlResource_Read_ResponseSensitiveToggle(t *testing.T) {
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	initialResponse := `{"key":"value1"}`
+	changedResponse := `{"key":"value2"}`
+
+	callCount := 0
+	httpmock.RegisterResponder(
+		"GET",
+		"https://example.com/read",
+		func(req *http.Request) (*http.Response, error) {
+			callCount++
+			if callCount == 1 {
+				return httpmock.NewStringResponse(200, initialResponse), nil
+			}
+			return httpmock.NewStringResponse(200, changedResponse), nil
+		},
+	)
+
+	ctx := context.Background()
+	r := &CurlResource{}
+
+	schemaResp := &resource2.SchemaResponse{}
+	r.Schema(ctx, resource2.SchemaRequest{}, schemaResp)
+
+	initialState := CurlResourceModel{
+		Id:                       types.StringValue("test"),
+		Name:                     types.StringValue("test"),
+		Url:                      types.StringValue("https://example.com/create"),
+		Method:                   types.StringValue("POST"),
+		SkipRead:                 types.BoolValue(false),
+		ReadUrl:                  types.StringValue("https://example.com/read"),
+		ReadMethod:               types.StringValue("GET"),
+		ReadResponseCodes:        types.ListValueMust(types.StringType, []attr.Value{types.StringValue("200")}),
+		ResponseCodes:            types.ListValueMust(types.StringType, []attr.Value{types.StringValue("200")}),
+		ResponseSensitive:        types.BoolValue(false),
+		Response:                 types.StringValue(initialResponse),
+		SensitiveResponse:        types.StringValue(""),
+		DriftMarker:              types.StringValue("initial"),
+		IgnoreResponseFields:     types.ListNull(types.StringType),
+		DestroyResponseCodes:     types.ListNull(types.StringType),
+		SkipDestroy:              types.BoolValue(true),
+		Headers:                  types.MapNull(types.StringType),
+		RequestParameters:        types.MapNull(types.StringType),
+		ReadHeaders:              types.MapNull(types.StringType),
+		ReadParameters:           types.MapNull(types.StringType),
+		DestroyHeaders:           types.MapNull(types.StringType),
+		DestroyRequestParameters: types.MapNull(types.StringType),
+	}
+
+	state1 := tfsdk.State{Schema: schemaResp.Schema}
+	diags := state1.Set(ctx, &initialState)
+	if diags.HasError() {
+		t.Fatalf("Failed to set initial state: %v", diags)
+	}
+
+	readReq1 := resource2.ReadRequest{State: state1}
+	readResp1 := &resource2.ReadResponse{State: state1}
+	r.Read(ctx, readReq1, readResp1)
+
+	if readResp1.Diagnostics.HasError() {
+		t.Fatalf("Read failed: %v", readResp1.Diagnostics)
+	}
+
+	var stateAfterRead1 CurlResourceModel
+	diags = readResp1.State.Get(ctx, &stateAfterRead1)
+	if diags.HasError() {
+		t.Fatalf("Failed to get state after first read: %v", diags)
+	}
+
+	if stateAfterRead1.DriftMarker.ValueString() != "initial" {
+		t.Errorf("Expected no drift after first read, but drift_marker changed to: %s", stateAfterRead1.DriftMarker.ValueString())
+	}
+
+	stateWithToggle := initialState
+	stateWithToggle.DriftMarker = types.StringValue("initial")
+
+	state2 := tfsdk.State{Schema: schemaResp.Schema}
+	diags = state2.Set(ctx, &stateWithToggle)
+	if diags.HasError() {
+		t.Fatalf("Failed to set state with toggle: %v", diags)
+	}
+
+	readReq2 := resource2.ReadRequest{State: state2}
+	readResp2 := &resource2.ReadResponse{State: state2}
+	r.Read(ctx, readReq2, readResp2)
+
+	if readResp2.Diagnostics.HasError() {
+		t.Fatalf("Read failed after toggle: %v", readResp2.Diagnostics)
+	}
+
+	var stateAfterRead2 CurlResourceModel
+	diags = readResp2.State.Get(ctx, &stateAfterRead2)
+	if diags.HasError() {
+		t.Fatalf("Failed to get state after second read: %v", diags)
+	}
+
+	if stateAfterRead2.DriftMarker.ValueString() == "initial" {
+		t.Error("Expected drift to be detected after response changed, but drift_marker remained 'initial'")
+	}
+
+	stateWithReverseToggle := CurlResourceModel{
+		Id:                       types.StringValue("test"),
+		Name:                     types.StringValue("test"),
+		Url:                      types.StringValue("https://example.com/create"),
+		Method:                   types.StringValue("POST"),
+		SkipRead:                 types.BoolValue(false),
+		ReadUrl:                  types.StringValue("https://example.com/read"),
+		ReadMethod:               types.StringValue("GET"),
+		ReadResponseCodes:        types.ListValueMust(types.StringType, []attr.Value{types.StringValue("200")}),
+		ResponseCodes:            types.ListValueMust(types.StringType, []attr.Value{types.StringValue("200")}),
+		ResponseSensitive:        types.BoolValue(true),
+		Response:                 types.StringValue(""),
+		SensitiveResponse:        types.StringValue(changedResponse),
+		DriftMarker:              types.StringValue("initial"),
+		IgnoreResponseFields:     types.ListNull(types.StringType),
+		DestroyResponseCodes:     types.ListNull(types.StringType),
+		SkipDestroy:              types.BoolValue(true),
+		Headers:                  types.MapNull(types.StringType),
+		RequestParameters:        types.MapNull(types.StringType),
+		ReadHeaders:              types.MapNull(types.StringType),
+		ReadParameters:           types.MapNull(types.StringType),
+		DestroyHeaders:           types.MapNull(types.StringType),
+		DestroyRequestParameters: types.MapNull(types.StringType),
+	}
+
+	state3 := tfsdk.State{Schema: schemaResp.Schema}
+	diags = state3.Set(ctx, &stateWithReverseToggle)
+	if diags.HasError() {
+		t.Fatalf("Failed to set state with reverse toggle: %v", diags)
+	}
+
+	callCount = 0
+
+	readReq3 := resource2.ReadRequest{State: state3}
+	readResp3 := &resource2.ReadResponse{State: state3}
+	r.Read(ctx, readReq3, readResp3)
+
+	if readResp3.Diagnostics.HasError() {
+		t.Fatalf("Read failed after reverse toggle: %v", readResp3.Diagnostics)
+	}
+
+	var stateAfterRead3 CurlResourceModel
+	diags = readResp3.State.Get(ctx, &stateAfterRead3)
+	if diags.HasError() {
+		t.Fatalf("Failed to get state after third read: %v", diags)
+	}
+
+	if stateAfterRead3.DriftMarker.ValueString() == "initial" {
+		t.Error("Expected drift to be detected after reverse toggle, but drift_marker remained 'initial'")
 	}
 }
 

@@ -2,6 +2,7 @@ package provider
 
 import (
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
@@ -849,4 +850,117 @@ func TestAccCurlEmphemeralResourceWithTLSSkipVerify(t *testing.T) {
 			},
 		},
 	})
+}
+
+const testAccEphemeralResourceSensitive = `
+ephemeral "terracurl_request" "ephems" {
+  method               = "POST"
+  name                 = "test"
+  response_codes       = ["201"]
+  url                  = "https://example.com/open"
+  response_sensitive   = true
+
+  skip_renew           = false
+  renew_interval       = "-10"
+  renew_url            = "https://example.com/renew"
+  renew_response_codes = ["200"]
+  renew_method         = "GET"
+
+  skip_close           = false
+  close_url            = "https://example.com/close"
+  close_response_codes = ["204"]
+  close_method         = "DELETE"
+}
+
+provider "echo" {
+  data = ephemeral.terracurl_request.ephems
+}
+
+resource "echo" "test" {}
+`
+
+func TestAccEphemeralResourceResponseSensitive(t *testing.T) {
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+	skipIfTerraformIsLegacy(t)
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+	httpmock.RegisterResponder(
+		"POST",
+		"https://example.com/open",
+		httpmock.NewStringResponder(201, `token-123`),
+	)
+	httpmock.RegisterResponder(
+		"GET",
+		"https://example.com/renew",
+		httpmock.NewStringResponder(200, `renew-token`),
+	)
+	httpmock.RegisterResponder(
+		"DELETE",
+		"https://example.com/close",
+		httpmock.NewStringResponder(204, `close-token`),
+	)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactoriesWithEcho,
+		CheckDestroy:             nil,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccEphemeralResourceSensitive,
+				Check: resource.ComposeTestCheckFunc(
+					testMockEndpointRegister("POST https://example.com/open"),
+					testMockEndpointRegister("GET https://example.com/renew"),
+				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"echo.test",
+						tfjsonpath.New("data").AtMapKey("response"),
+						knownvalue.StringExact(""),
+					),
+					statecheck.ExpectKnownValue(
+						"echo.test",
+						tfjsonpath.New("data").AtMapKey("sensitive_response"),
+						knownvalue.StringExact("token-123"),
+					),
+				},
+			},
+			{
+				RefreshState: true,
+				Check: resource.ComposeTestCheckFunc(
+					testMockEndpointRegister("DELETE https://example.com/close"),
+				),
+			},
+		},
+	})
+}
+
+func TestEphemeralResponseSensitiveRouting(t *testing.T) {
+	data := CurlEphemeralModel{
+		ResponseSensitive: types.BoolValue(true),
+	}
+
+	setEphemeralOpenResponse(&data, "open-body")
+	setEphemeralRenewResponse(&data, "renew-body")
+	setEphemeralCloseResponse(&data, "close-body")
+
+	if data.Response.ValueString() != "" {
+		t.Fatalf("expected empty response, got %q", data.Response.ValueString())
+	}
+	if data.SensitiveResponse.ValueString() != "open-body" {
+		t.Fatalf("expected sensitive_response open-body, got %q", data.SensitiveResponse.ValueString())
+	}
+	if data.RenewResponse.ValueString() != "" {
+		t.Fatalf("expected empty renew_response, got %q", data.RenewResponse.ValueString())
+	}
+	if data.SensitiveRenewResponse.ValueString() != "renew-body" {
+		t.Fatalf("expected sensitive_renew_response renew-body, got %q", data.SensitiveRenewResponse.ValueString())
+	}
+	if data.CloseResponse.ValueString() != "" {
+		t.Fatalf("expected empty close_response, got %q", data.CloseResponse.ValueString())
+	}
+	if data.SensitiveCloseResponse.ValueString() != "close-body" {
+		t.Fatalf("expected sensitive_close_response close-body, got %q", data.SensitiveCloseResponse.ValueString())
+	}
 }

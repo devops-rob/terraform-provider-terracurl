@@ -23,7 +23,7 @@ var _ ephemeral.EphemeralResourceWithRenew = (*EphemeralCurlResource)(nil)
 var _ ephemeral.EphemeralResourceWithClose = (*EphemeralCurlResource)(nil)
 
 type EphemeralCurlResource struct {
-	//client *http.Client
+	meta *ProviderMeta
 }
 
 func (e *EphemeralCurlResource) Metadata(ctx context.Context, req ephemeral.MetadataRequest, resp *ephemeral.MetadataResponse) {
@@ -60,6 +60,8 @@ type CurlEphemeralModel struct {
 	MaxRetry          types.Int64  `tfsdk:"max_retry"`
 	Timeout           types.Int64  `tfsdk:"timeout"`
 	Response          types.String `tfsdk:"response"`
+	SensitiveResponse types.String `tfsdk:"sensitive_response"`
+	ResponseSensitive types.Bool   `tfsdk:"response_sensitive"`
 	ResponseCodes     types.List   `tfsdk:"response_codes"`
 	StatusCode        types.String `tfsdk:"status_code"`
 	SkipRenew         types.Bool   `tfsdk:"skip_renew"`
@@ -80,6 +82,7 @@ type CurlEphemeralModel struct {
 	RenewMaxRetry          types.Int64  `tfsdk:"renew_max_retry"`
 	RenewTimeout           types.Int64  `tfsdk:"renew_timeout"`
 	RenewResponse          types.String `tfsdk:"renew_response"`
+	SensitiveRenewResponse types.String `tfsdk:"sensitive_renew_response"`
 	RenewResponseCodes     types.List   `tfsdk:"renew_response_codes"`
 
 	SkipClose types.Bool `tfsdk:"skip_close"`
@@ -99,6 +102,7 @@ type CurlEphemeralModel struct {
 	CloseMaxRetry          types.Int64  `tfsdk:"close_max_retry"`
 	CloseTimeout           types.Int64  `tfsdk:"close_timeout"`
 	CloseResponse          types.String `tfsdk:"close_response"`
+	SensitiveCloseResponse types.String `tfsdk:"sensitive_close_response"`
 	CloseResponseCodes     types.List   `tfsdk:"close_response_codes"`
 }
 
@@ -131,7 +135,7 @@ func (e *EphemeralCurlResource) Schema(ctx context.Context, req ephemeral.Schema
 			"headers": schema.MapAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,
-				MarkdownDescription: "Map of headers to attach to the API call",
+				MarkdownDescription: "Map of headers to attach to the API call." + hostHeaderMarkdownSuffix,
 			},
 			"request_parameters": schema.MapAttribute{
 				ElementType:         types.StringType,
@@ -177,7 +181,17 @@ func (e *EphemeralCurlResource) Schema(ctx context.Context, req ephemeral.Schema
 			},
 			"response": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "JSON response received from request",
+				MarkdownDescription: "JSON response received from request. Empty when `response_sensitive` is `true`; use `sensitive_response` instead.",
+			},
+			"sensitive_response": schema.StringAttribute{
+				Computed:            true,
+				Sensitive:           true,
+				MarkdownDescription: "JSON response received from request, marked as sensitive so it is not displayed in plan output. Populated only when `response_sensitive` is `true`.",
+			},
+			"response_sensitive": schema.BoolAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Set to `true` to treat response bodies as sensitive. When enabled, response bodies are written to the corresponding `sensitive_*` attributes and the non-sensitive attributes are left empty so secret values are not displayed in plan output. Defaults to `false` to preserve existing behavior.",
 			},
 			"response_codes": schema.ListAttribute{
 				Required:            true,
@@ -214,7 +228,7 @@ func (e *EphemeralCurlResource) Schema(ctx context.Context, req ephemeral.Schema
 			"renew_headers": schema.MapAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,
-				MarkdownDescription: "Map of headers to attach to the API call",
+				MarkdownDescription: "Map of headers to attach to the API call." + hostHeaderMarkdownSuffix,
 			},
 			"renew_request_parameters": schema.MapAttribute{
 				ElementType:         types.StringType,
@@ -260,7 +274,12 @@ func (e *EphemeralCurlResource) Schema(ctx context.Context, req ephemeral.Schema
 			},
 			"renew_response": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "JSON response received from request",
+				MarkdownDescription: "JSON response received from request. Empty when `response_sensitive` is `true`; use `sensitive_renew_response` instead.",
+			},
+			"sensitive_renew_response": schema.StringAttribute{
+				Computed:            true,
+				Sensitive:           true,
+				MarkdownDescription: "JSON response received from renew request, marked as sensitive so it is not displayed in plan output. Populated only when `response_sensitive` is `true`.",
 			},
 			"renew_response_codes": schema.ListAttribute{
 				Optional:            true,
@@ -288,7 +307,7 @@ func (e *EphemeralCurlResource) Schema(ctx context.Context, req ephemeral.Schema
 			"close_headers": schema.MapAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,
-				MarkdownDescription: "Map of headers to attach to the API call",
+				MarkdownDescription: "Map of headers to attach to the API call." + hostHeaderMarkdownSuffix,
 			},
 			"close_request_parameters": schema.MapAttribute{
 				ElementType:         types.StringType,
@@ -334,7 +353,12 @@ func (e *EphemeralCurlResource) Schema(ctx context.Context, req ephemeral.Schema
 			},
 			"close_response": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "JSON response received from request",
+				MarkdownDescription: "JSON response received from request. Empty when `response_sensitive` is `true`; use `sensitive_close_response` instead.",
+			},
+			"sensitive_close_response": schema.StringAttribute{
+				Computed:            true,
+				Sensitive:           true,
+				MarkdownDescription: "JSON response received from close request, marked as sensitive so it is not displayed in plan output. Populated only when `response_sensitive` is `true`.",
 			},
 			"close_response_codes": schema.ListAttribute{
 				Optional:            true,
@@ -343,6 +367,30 @@ func (e *EphemeralCurlResource) Schema(ctx context.Context, req ephemeral.Schema
 			},
 		},
 	}
+}
+
+func (e *EphemeralCurlResource) Configure(ctx context.Context, req ephemeral.ConfigureRequest, resp *ephemeral.ConfigureResponse) {
+	if req.ProviderData == nil {
+		return
+	}
+
+	meta, ok := req.ProviderData.(*ProviderMeta)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Ephemeral Resource Configure Type",
+			fmt.Sprintf("Expected *ProviderMeta, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+		return
+	}
+
+	e.meta = meta
+}
+
+func (e *EphemeralCurlResource) providerMeta() *ProviderMeta {
+	if e.meta != nil {
+		return e.meta
+	}
+	return DefaultProviderMeta()
 }
 
 func (e *EphemeralCurlResource) Open(ctx context.Context, req ephemeral.OpenRequest, resp *ephemeral.OpenResponse) {
@@ -382,11 +430,11 @@ func (e *EphemeralCurlResource) Open(ctx context.Context, req ephemeral.OpenRequ
 
 	var client *http.Client
 	var err error
+	var tlsConfig *TlsConfig
 
 	if useTLS {
 		tflog.Debug(ctx, "Creating TLS enabled client")
-		// Build TLS Config.
-		tlsConfig := &TlsConfig{
+		tlsConfig = &TlsConfig{
 			CertFile:        data.CertFile.ValueString(),
 			KeyFile:         data.KeyFile.ValueString(),
 			CaCertFile:      data.CaCertFile.ValueString(),
@@ -394,24 +442,16 @@ func (e *EphemeralCurlResource) Open(ctx context.Context, req ephemeral.OpenRequ
 			SkipTlsVerify:   data.SkipTlsVerify.ValueBool(),
 		}
 
-		// Validate TLS settings.
 		if tlsConfig.CertFile != "" && tlsConfig.KeyFile == "" {
 			resp.Diagnostics.AddError("Validation Error", "`key_file` must be set if `cert_file` is set.")
 			return
 		}
+	}
 
-		// Create TLS-enabled client.
-		client, err = createTlsClient(tlsConfig)
-		if err != nil {
-			resp.Diagnostics.AddError("TLS Client Creation Failed", err.Error())
-			return
-		}
-
-	} else {
-		// Use default non-TLS client.
-		client = &http.Client{
-			Timeout: 30 * time.Second,
-		}
+	client, err = e.providerMeta().NewHTTPClient(tlsConfig)
+	if err != nil {
+		resp.Diagnostics.AddError("HTTP Client Creation Failed", err.Error())
+		return
 	}
 
 	reqBody := []byte(data.RequestBody.ValueString())
@@ -422,13 +462,7 @@ func (e *EphemeralCurlResource) Open(ctx context.Context, req ephemeral.OpenRequ
 	}
 
 	// Add headers.
-	if !data.Headers.IsNull() && !data.Headers.IsUnknown() {
-		for k, v := range data.Headers.Elements() {
-			if strVal, ok := v.(types.String); ok {
-				request.Header.Set(k, strVal.ValueString())
-			}
-		}
-	}
+	applyRequestHeaders(request, data.Headers)
 
 	// Add query parameters.
 	if !data.RequestParameters.IsNull() && !data.RequestParameters.IsUnknown() {
@@ -497,7 +531,7 @@ func (e *EphemeralCurlResource) Open(ctx context.Context, req ephemeral.OpenRequ
 	}
 
 	data.RequestUrlString = types.StringValue(request.URL.String())
-	data.Response = types.StringValue(bodyString)
+	setEphemeralOpenResponse(&data, bodyString)
 	data.StatusCode = types.StringValue(strconv.Itoa(statusCode))
 
 	tflog.Debug(ctx, fmt.Sprintf("renew parameters in Open() is set to %v", convertMap(data.RenewRequestParameters)))
@@ -527,7 +561,8 @@ func (e *EphemeralCurlResource) Open(ctx context.Context, req ephemeral.OpenRequ
 		"Timeout":           data.Timeout.ValueInt64(),
 		"StatusCode":        data.StatusCode.ValueString(),
 		"Response_codes":    data.ResponseCodes.Elements(),
-		"Response":          data.Response.ValueString(),
+		"Response":          bodyString,
+		"ResponseSensitive": data.ResponseSensitive.ValueBool(),
 
 		"SkipRenew":              data.SkipRenew.ValueBool(),
 		"RenewUrl":               data.RenewUrl.ValueString(),
@@ -967,7 +1002,13 @@ func (e *EphemeralCurlResource) Renew(ctx context.Context, req ephemeral.RenewRe
 		return
 	}
 
+	responseSensitive, ok := privateMap["ResponseSensitive"].(bool)
+	if !ok {
+		responseSensitive = false
+	}
+
 	privateData := CurlEphemeralModel{
+		ResponseSensitive:      types.BoolValue(responseSensitive),
 		RenewMethod:            types.StringValue(renewMethod),
 		RenewUrl:               types.StringValue(renewUrl),
 		SkipRenew:              types.BoolValue(skipRenew),
@@ -1033,10 +1074,10 @@ func (e *EphemeralCurlResource) Renew(ctx context.Context, req ephemeral.RenewRe
 		(!privateData.RenewKeyFile.IsNull() && privateData.RenewKeyFile.ValueString() != "") ||
 		(!privateData.RenewCaCertFile.IsNull() && privateData.RenewCaCertFile.ValueString() != "")
 
+	var tlsConfig *TlsConfig
 	if useTls {
 		tflog.Debug(ctx, "using TLS client for renew call")
-		// Build TLS Config
-		tlsConfig := &TlsConfig{
+		tlsConfig = &TlsConfig{
 			CertFile:        privateData.RenewCertFile.ValueString(),
 			KeyFile:         privateData.RenewKeyFile.ValueString(),
 			CaCertFile:      privateData.RenewCaCertFile.ValueString(),
@@ -1044,25 +1085,18 @@ func (e *EphemeralCurlResource) Renew(ctx context.Context, req ephemeral.RenewRe
 			SkipTlsVerify:   privateData.RenewSkipTlsVerify.ValueBool(),
 		}
 
-		// Validate TLS settings
 		if tlsConfig.CertFile != "" && tlsConfig.KeyFile == "" {
 			resp.Diagnostics.AddError("Validation Error", "`renew_key_file` must be set if `renew_cert_file` is set.")
 			return
 		}
-
-		// Create TLS-enabled client
-		client, err = createTlsClient(tlsConfig)
-		if err != nil {
-			resp.Diagnostics.AddError("TLS Client Creation Failed", err.Error())
-			return
-		}
-
 	} else {
-		// Use default non-TLS client
 		tflog.Debug(ctx, "using default client for renew call")
-		client = &http.Client{
-			Timeout: 30 * time.Second,
-		}
+	}
+
+	client, err = e.providerMeta().NewHTTPClient(tlsConfig)
+	if err != nil {
+		resp.Diagnostics.AddError("HTTP Client Creation Failed", err.Error())
+		return
 	}
 
 	reqBody := []byte(privateData.RenewRequestBody.ValueString())
@@ -1073,13 +1107,7 @@ func (e *EphemeralCurlResource) Renew(ctx context.Context, req ephemeral.RenewRe
 	}
 
 	// Add headers
-	if !privateData.RenewHeaders.IsNull() && !privateData.RenewHeaders.IsUnknown() {
-		for k, v := range privateData.RenewHeaders.Elements() {
-			if strVal, ok := v.(types.String); ok {
-				request.Header.Set(k, strVal.ValueString())
-			}
-		}
-	}
+	applyRequestHeaders(request, privateData.RenewHeaders)
 
 	tflog.Debug(ctx, fmt.Sprintf("Parameters: %v\n", privateData.RenewRequestParameters.Elements()))
 
@@ -1150,7 +1178,7 @@ func (e *EphemeralCurlResource) Renew(ctx context.Context, req ephemeral.RenewRe
 	}
 
 	privateData.RenewRequestUrlString = types.StringValue(request.URL.String())
-	privateData.RenewResponse = types.StringValue(bodyString)
+	setEphemeralRenewResponse(&privateData, bodyString)
 	privateData.StatusCode = types.StringValue(strconv.Itoa(statusCode))
 
 	// Renew again
@@ -1351,7 +1379,13 @@ func (e *EphemeralCurlResource) Close(ctx context.Context, req ephemeral.CloseRe
 		return
 	}
 
+	responseSensitive, ok := privateMap["ResponseSensitive"].(bool)
+	if !ok {
+		responseSensitive = false
+	}
+
 	privateData := CurlEphemeralModel{
+		ResponseSensitive:      types.BoolValue(responseSensitive),
 		CloseMethod:            types.StringValue(closeMethod),
 		CloseUrl:               types.StringValue(closeUrl),
 		SkipClose:              types.BoolValue(skipClose),
@@ -1388,27 +1422,25 @@ func (e *EphemeralCurlResource) Close(ctx context.Context, req ephemeral.CloseRe
 		hasValue(privateData.CloseKeyFile) ||
 		hasValue(privateData.CloseCaCertFile)
 
+	var closeTlsConfig *TlsConfig
 	if useCloseTls {
 		tflog.Debug(ctx, "Using custom TLS client for Close() operation")
 
-		closeTlsConfig := &TlsConfig{
+		closeTlsConfig = &TlsConfig{
 			CertFile:        privateData.CloseCertFile.ValueString(),
 			KeyFile:         privateData.CloseKeyFile.ValueString(),
 			CaCertFile:      privateData.CloseCaCertFile.ValueString(),
 			CaCertDirectory: privateData.CloseCaCertDirectory.ValueString(),
 			SkipTlsVerify:   privateData.CloseSkipTlsVerify.ValueBool(),
 		}
-
-		tlsClient, err := createTlsClient(closeTlsConfig)
-		if err != nil {
-			resp.Diagnostics.AddError("Close Error", fmt.Sprintf("Failed to create TLS client: %s", err))
-			return
-		}
-		client = tlsClient
 	} else {
-		// Default non-TLS client
 		tflog.Debug(ctx, "Using default HTTP client for Close() operation")
-		client = &http.Client{Timeout: 30 * time.Second}
+	}
+
+	client, err = e.providerMeta().NewHTTPClient(closeTlsConfig)
+	if err != nil {
+		resp.Diagnostics.AddError("Close Error", fmt.Sprintf("Failed to create HTTP client: %s", err))
+		return
 	}
 
 	// Build Close Request
@@ -1424,14 +1456,10 @@ func (e *EphemeralCurlResource) Close(ctx context.Context, req ephemeral.CloseRe
 		return
 	}
 
-	if !privateData.CloseHeaders.IsNull() && !privateData.CloseHeaders.IsUnknown() {
-		for k, v := range privateData.CloseHeaders.Elements() {
-			if strVal, ok := v.(types.String); ok {
-				request.Header.Set(k, strVal.ValueString())
-			}
-		}
-	} else {
+	if privateData.CloseHeaders.IsNull() || privateData.CloseHeaders.IsUnknown() {
 		tflog.Debug(ctx, "No CloseHeaders provided, proceeding without headers")
+	} else {
+		applyRequestHeaders(request, privateData.CloseHeaders)
 	}
 
 	// Add Query Parameters
@@ -1507,6 +1535,7 @@ func (e *EphemeralCurlResource) Close(ctx context.Context, req ephemeral.CloseRe
 		}
 	}
 
+	setEphemeralCloseResponse(&privateData, string(bodyBytes))
 }
 
 func (e EphemeralCurlResource) ConfigValidators(ctx context.Context) []ephemeral.ConfigValidator {

@@ -26,4 +26,12 @@ Define the provider as a `required_provider` to use its functions
 
 {{ tffile "examples/provider/provider.tf" }}
 
+## HTTP Proxy Support
+
+TerraCurl supports outbound HTTP and HTTPS proxies through standard environment variables (`HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY`) and optional provider attributes (`http_proxy`, `https_proxy`, `no_proxy`).
+
+See the [HTTP Proxy Support guide](guides/proxy) for configuration examples, precedence rules, and limitations.
+
+{{ tffile "examples/provider/proxy_example.tf" }}
+
 ## Limitations

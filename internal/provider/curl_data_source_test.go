@@ -329,3 +329,89 @@ data "terracurl_request" "tls_skip_verify_test" {
 }
 `, url, certFile, keyFile)
 }
+
+func TestAccDataSourceCurlResponseSensitive(t *testing.T) {
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	secretBody := `{"token": "super-secret-token", "key": "key-1234"}`
+	httpmock.RegisterResponder(
+		"GET",
+		"https://example.com/data-sensitive",
+		httpmock.NewStringResponder(200, secretBody),
+	)
+
+	rName := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDataSourceCurlResponseSensitive(rName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("data.terracurl_request.sensitive_test", "response_sensitive", "true"),
+					resource.TestCheckResourceAttr("data.terracurl_request.sensitive_test", "response", ""),
+					resource.TestCheckResourceAttr("data.terracurl_request.sensitive_test", "sensitive_response", secretBody),
+				),
+			},
+		},
+	})
+}
+
+func testAccDataSourceCurlResponseSensitive(name string) string {
+	return fmt.Sprintf(`
+data "terracurl_request" "sensitive_test" {
+  name               = "%s"
+  url                = "https://example.com/data-sensitive"
+  method             = "GET"
+  response_codes     = ["200"]
+  response_sensitive = true
+}
+`, name)
+}
+
+func TestAccDataSourceCurlResponseSensitiveDefault(t *testing.T) {
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	body := `{"message": "ok"}`
+	httpmock.RegisterResponder(
+		"GET",
+		"https://example.com/data-default",
+		httpmock.NewStringResponder(200, body),
+	)
+
+	rName := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDataSourceCurlResponseSensitiveDefault(rName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("data.terracurl_request.default_test", "response", body),
+					resource.TestCheckResourceAttr("data.terracurl_request.default_test", "sensitive_response", ""),
+				),
+			},
+		},
+	})
+}
+
+func testAccDataSourceCurlResponseSensitiveDefault(name string) string {
+	return fmt.Sprintf(`
+data "terracurl_request" "default_test" {
+  name           = "%s"
+  url            = "https://example.com/data-default"
+  method         = "GET"
+  response_codes = ["200"]
+}
+`, name)
+}

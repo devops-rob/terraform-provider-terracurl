@@ -22,7 +22,7 @@ var _ datasource.DataSource = &CurlDataSource{}
 type ThingDataSource struct{}
 
 type CurlDataSource struct {
-	//client *http.Client
+	meta *ProviderMeta
 }
 
 func NewCurlDataSource() datasource.DataSource {
@@ -47,6 +47,8 @@ type CurlDataSourceModel struct {
 	MaxRetry          types.Int64  `tfsdk:"max_retry"`
 	Timeout           types.Int64  `tfsdk:"timeout"`
 	Response          types.String `tfsdk:"response"`
+	SensitiveResponse types.String `tfsdk:"sensitive_response"`
+	ResponseSensitive types.Bool   `tfsdk:"response_sensitive"`
 	ResponseCodes     types.List   `tfsdk:"response_codes"`
 	StatusCode        types.String `tfsdk:"status_code"`
 }
@@ -82,7 +84,7 @@ func (d *CurlDataSource) Schema(ctx context.Context, req datasource.SchemaReques
 			"headers": schema.MapAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,
-				MarkdownDescription: "Map of headers to attach to the API call",
+				MarkdownDescription: "Map of headers to attach to the API call." + hostHeaderMarkdownSuffix,
 			},
 			"request_parameters": schema.MapAttribute{
 				ElementType:         types.StringType,
@@ -128,7 +130,17 @@ func (d *CurlDataSource) Schema(ctx context.Context, req datasource.SchemaReques
 			},
 			"response": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "JSON response received from request",
+				MarkdownDescription: "JSON response received from request. Empty when `response_sensitive` is `true`; use `sensitive_response` instead.",
+			},
+			"sensitive_response": schema.StringAttribute{
+				Computed:            true,
+				Sensitive:           true,
+				MarkdownDescription: "JSON response received from request, marked as sensitive so it is not displayed in plan output. Populated only when `response_sensitive` is `true`.",
+			},
+			"response_sensitive": schema.BoolAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Set to `true` to treat the response as sensitive. When enabled, the response body is written to `sensitive_response` (a sensitive attribute) and `response` is left empty so that secret values are not displayed in plan output. Defaults to `false` to preserve existing behavior.",
 			},
 			"response_codes": schema.ListAttribute{
 				Required:            true,
@@ -143,6 +155,30 @@ func (d *CurlDataSource) Schema(ctx context.Context, req datasource.SchemaReques
 	}
 }
 
+func (d *CurlDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+	if req.ProviderData == nil {
+		return
+	}
+
+	meta, ok := req.ProviderData.(*ProviderMeta)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Data Source Configure Type",
+			fmt.Sprintf("Expected *ProviderMeta, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+		return
+	}
+
+	d.meta = meta
+}
+
+func (d *CurlDataSource) providerMeta() *ProviderMeta {
+	if d.meta != nil {
+		return d.meta
+	}
+	return DefaultProviderMeta()
+}
+
 func (d *CurlDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var data CurlDataSourceModel
 
@@ -155,11 +191,10 @@ func (d *CurlDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 
 	var client *http.Client
 	var err error
+	var tlsConfig *TlsConfig
 
 	if useTLS {
-
-		// Build TLS Config.
-		tlsConfig := &TlsConfig{
+		tlsConfig = &TlsConfig{
 			CertFile:        data.CertFile.ValueString(),
 			KeyFile:         data.KeyFile.ValueString(),
 			CaCertFile:      data.CaCertFile.ValueString(),
@@ -167,24 +202,16 @@ func (d *CurlDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 			SkipTlsVerify:   data.SkipTlsVerify.ValueBool(),
 		}
 
-		// Validate TLS settings.
 		if tlsConfig.CertFile != "" && tlsConfig.KeyFile == "" {
 			resp.Diagnostics.AddError("Validation Error", "`key_file` must be set if `cert_file` is set.")
 			return
 		}
+	}
 
-		// Create TLS-enabled client.
-		client, err = createTlsClient(tlsConfig)
-		if err != nil {
-			resp.Diagnostics.AddError("TLS Client Creation Failed", err.Error())
-			return
-		}
-
-	} else {
-		// Use default non-TLS client.
-		client = &http.Client{
-			Timeout: 30 * time.Second,
-		}
+	client, err = d.providerMeta().NewHTTPClient(tlsConfig)
+	if err != nil {
+		resp.Diagnostics.AddError("HTTP Client Creation Failed", err.Error())
+		return
 	}
 
 	reqBody := []byte(data.RequestBody.ValueString())
@@ -195,13 +222,7 @@ func (d *CurlDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	}
 
 	// Add headers.
-	if !data.Headers.IsNull() && !data.Headers.IsUnknown() {
-		for k, v := range data.Headers.Elements() {
-			if strVal, ok := v.(types.String); ok {
-				request.Header.Set(k, strVal.ValueString())
-			}
-		}
-	}
+	applyRequestHeaders(request, data.Headers)
 
 	// Add query parameters.
 	if !data.RequestParameters.IsNull() && !data.RequestParameters.IsUnknown() {
@@ -270,7 +291,7 @@ func (d *CurlDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	}
 
 	data.RequestUrlString = types.StringValue(request.URL.String())
-	data.Response = types.StringValue(bodyString)
+	setDataSourceResponseValues(&data, bodyString)
 	data.StatusCode = types.StringValue(strconv.Itoa(statusCode))
 
 	// Save data into Terraform state.

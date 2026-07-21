@@ -52,11 +52,10 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: false
-      # Temporarily download Terraform 1.8 prerelease for function documentation support.
-      # When Terraform 1.8.0 final is released, this can be removed.
+      # Terraform 1.14+ is required for action schema export during docs generation.
       - uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
         with:
-          terraform_version: '1.10.5'
+          terraform_version: '1.14.5'
           terraform_wrapper: false
       - run: go generate ./...
       - name: git diff
@@ -84,6 +83,8 @@ jobs:
           - '1.9.*'
           - '1.10.*'
           - '1.11.*'
+          - '1.14.*'
+          - '1.15.*'
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
       - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0

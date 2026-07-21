@@ -41,7 +41,7 @@ func NewCurlResource() resource.Resource {
 
 // CurlResource defines the resource implementation.
 type CurlResource struct {
-	client *http.Client
+	meta *ProviderMeta
 }
 
 // CurlResourceModel describes the resource data model.
@@ -63,6 +63,8 @@ type CurlResourceModel struct {
 	MaxRetry                 types.Int64  `tfsdk:"max_retry"`
 	Timeout                  types.Int64  `tfsdk:"timeout"`
 	Response                 types.String `tfsdk:"response"`
+	SensitiveResponse        types.String `tfsdk:"sensitive_response"`
+	ResponseSensitive        types.Bool   `tfsdk:"response_sensitive"`
 	ResponseCodes            types.List   `tfsdk:"response_codes"`
 	StatusCode               types.String `tfsdk:"status_code"`
 	SkipDestroy              types.Bool   `tfsdk:"skip_destroy"`
@@ -142,7 +144,7 @@ func (r *CurlResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 			"headers": schema.MapAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,
-				MarkdownDescription: "Map of headers to attach to the API call",
+				MarkdownDescription: "Map of headers to attach to the API call." + hostHeaderMarkdownSuffix,
 				PlanModifiers: []planmodifier.Map{
 					mapplanmodifier.RequiresReplace(),
 				},
@@ -212,7 +214,18 @@ func (r *CurlResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 			},
 			"response": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "JSON response received from request",
+				MarkdownDescription: "JSON response received from request. Empty when `response_sensitive` is `true`; use `sensitive_response` instead.",
+			},
+			"sensitive_response": schema.StringAttribute{
+				Computed:            true,
+				Sensitive:           true,
+				MarkdownDescription: "JSON response received from request, marked as sensitive so it is not displayed in plan output. Populated only when `response_sensitive` is `true`.",
+			},
+			"response_sensitive": schema.BoolAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Set to `true` to treat the response as sensitive. When enabled, the response body is written to `sensitive_response` (a sensitive attribute) and `response` is left empty so that secret values are not displayed in plan output. Defaults to `false` to preserve existing behavior.",
+				Default:             booldefault.StaticBool(false),
 			},
 			"response_codes": schema.ListAttribute{
 				Required:            true,
@@ -255,7 +268,7 @@ func (r *CurlResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 			"destroy_headers": schema.MapAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,
-				MarkdownDescription: "Map of headers to attach to the destroy API call",
+				MarkdownDescription: "Map of headers to attach to the destroy API call." + hostHeaderMarkdownSuffix,
 				PlanModifiers: []planmodifier.Map{
 					mapplanmodifier.RequiresReplace(),
 				},
@@ -347,7 +360,7 @@ func (r *CurlResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 			"read_headers": schema.MapAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,
-				MarkdownDescription: "Map of headers for the read request.",
+				MarkdownDescription: "Map of headers for the read request." + hostHeaderMarkdownSuffix,
 			},
 
 			"read_request_body": schema.StringAttribute{
@@ -407,23 +420,27 @@ func (r *CurlResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 }
 
 func (r *CurlResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
 	}
 
-	client, ok := req.ProviderData.(*http.Client)
-
+	meta, ok := req.ProviderData.(*ProviderMeta)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *http.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *ProviderMeta, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
-
 		return
 	}
 
-	r.client = client
+	r.meta = meta
+}
+
+func (r *CurlResource) providerMeta() *ProviderMeta {
+	if r.meta != nil {
+		return r.meta
+	}
+	return DefaultProviderMeta()
 }
 
 func (r *CurlResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -475,10 +492,10 @@ func (r *CurlResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	var client *http.Client
 	var err error
+	var tlsConfig *TlsConfig
 
 	if useTLS {
-		// Build TLS Config
-		tlsConfig := &TlsConfig{
+		tlsConfig = &TlsConfig{
 			CertFile:        data.CertFile.ValueString(),
 			KeyFile:         data.KeyFile.ValueString(),
 			CaCertFile:      data.CaCertFile.ValueString(),
@@ -486,24 +503,16 @@ func (r *CurlResource) Create(ctx context.Context, req resource.CreateRequest, r
 			SkipTlsVerify:   data.SkipTlsVerify.ValueBool(),
 		}
 
-		// Validate TLS settings
 		if tlsConfig.CertFile != "" && tlsConfig.KeyFile == "" {
 			resp.Diagnostics.AddError("Validation Error", "`key_file` must be set if `cert_file` is set.")
 			return
 		}
+	}
 
-		// Create TLS-enabled client
-		client, err = createTlsClient(tlsConfig)
-		if err != nil {
-			resp.Diagnostics.AddError("TLS Client Creation Failed", err.Error())
-			return
-		}
-
-	} else {
-		// Use default non-TLS client
-		client = &http.Client{
-			Timeout: 30 * time.Second,
-		}
+	client, err = r.providerMeta().NewHTTPClient(tlsConfig)
+	if err != nil {
+		resp.Diagnostics.AddError("HTTP Client Creation Failed", err.Error())
+		return
 	}
 
 	reqBody := []byte(data.RequestBody.ValueString())
@@ -514,13 +523,7 @@ func (r *CurlResource) Create(ctx context.Context, req resource.CreateRequest, r
 	}
 
 	// Add headers
-	if !data.Headers.IsNull() && !data.Headers.IsUnknown() {
-		for k, v := range data.Headers.Elements() {
-			if strVal, ok := v.(types.String); ok {
-				request.Header.Set(k, strVal.ValueString())
-			}
-		}
-	}
+	applyRequestHeaders(request, data.Headers)
 
 	// Add query parameters
 	if !data.RequestParameters.IsNull() && !data.RequestParameters.IsUnknown() {
@@ -587,10 +590,23 @@ func (r *CurlResource) Create(ctx context.Context, req resource.CreateRequest, r
 		}
 	}
 
+	var ignoredFields []string
+	for _, v := range data.IgnoreResponseFields.Elements() {
+		if strVal, ok := v.(types.String); ok {
+			ignoredFields = append(ignoredFields, strVal.ValueString())
+		}
+	}
+
+	sanitizedResponse, err := sanitizeResponse(bodyString, ignoredFields)
+	if err != nil {
+		resp.Diagnostics.AddError("Sanitize Error", fmt.Sprintf("Failed to sanitize response: %s", err))
+		return
+	}
+
 	data.DriftMarker = types.StringValue("initial")
 	data.DestroyRequestUrlString = types.StringValue(data.DestroyUrl.ValueString())
 	data.RequestUrlString = types.StringValue(request.URL.String())
-	data.Response = types.StringValue(bodyString)
+	setResourceResponseValues(&data, sanitizedResponse)
 	data.StatusCode = types.StringValue(strconv.Itoa(statusCode))
 	diags := resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -623,27 +639,26 @@ func (r *CurlResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	var client *http.Client
 	useReadTls := !data.ReadCertFile.IsNull() || !data.ReadKeyFile.IsNull() || !data.ReadCaCertFile.IsNull()
 
+	var readTlsConfig *TlsConfig
 	if useReadTls {
 		tflog.Debug(ctx, "Using custom TLS client for Read() operation")
 
-		readTlsConfig := &TlsConfig{
+		readTlsConfig = &TlsConfig{
 			CertFile:        data.ReadCertFile.ValueString(),
 			KeyFile:         data.ReadKeyFile.ValueString(),
 			CaCertFile:      data.ReadCaCertFile.ValueString(),
 			CaCertDirectory: data.ReadCaCertDirectory.ValueString(),
 			SkipTlsVerify:   data.ReadSkipTlsVerify.ValueBool(),
 		}
-
-		tlsClient, err := createTlsClient(readTlsConfig)
-		if err != nil {
-			resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Failed to create TLS client: %s", err))
-			return
-		}
-		client = tlsClient
 	} else {
-		// Default non-TLS client
 		tflog.Debug(ctx, "Using default HTTP client for Read() operation")
-		client = &http.Client{Timeout: 30 * time.Second}
+	}
+
+	var err error
+	client, err = r.providerMeta().NewHTTPClient(readTlsConfig)
+	if err != nil {
+		resp.Diagnostics.AddError("Read Error", fmt.Sprintf("Failed to create HTTP client: %s", err))
+		return
 	}
 
 	// ======= Build Read Request =======
@@ -659,13 +674,7 @@ func (r *CurlResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 
 	// ======= Add Headers =======
-	if !data.ReadHeaders.IsNull() && !data.ReadHeaders.IsUnknown() {
-		for k, v := range data.ReadHeaders.Elements() {
-			if strVal, ok := v.(types.String); ok {
-				request.Header.Set(k, strVal.ValueString())
-			}
-		}
-	}
+	applyRequestHeaders(request, data.ReadHeaders)
 
 	// ======= Add Query Parameters =======
 	if !data.ReadParameters.IsNull() && !data.ReadParameters.IsUnknown() {
@@ -679,7 +688,7 @@ func (r *CurlResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 
 	// ======= Execute Request =======
-	tflog.Debug(ctx, fmt.Sprintf("Resource read API Call: \nURL: %s\nHeaders: %s\nMethod: %s\nRequest Body: %s\n", request.URL.String(), request.Header, request.Method, data.RequestBody.ValueString()))
+	tflog.Debug(ctx, fmt.Sprintf("Resource read API Call: \nURL: %s\nHeaders: %s\nMethod: %s\nRequest Body: %s\n", request.URL.String(), request.Header, request.Method, data.ReadRequestBody.ValueString()))
 
 	httpResp, err := client.Do(request)
 	if err != nil {
@@ -713,8 +722,10 @@ func (r *CurlResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
-	// Compare old and new sanitized responses
-	oldSanitized, err := sanitizeResponse(data.Response.ValueString(), ignoredFields)
+	// Compare old and new sanitized responses. The prior response is stored in
+	// whichever attribute matches the current response_sensitive setting.
+	priorResponse := priorResponseValue(data.ResponseSensitive, data.Response, data.SensitiveResponse)
+	oldSanitized, err := sanitizeResponse(priorResponse, ignoredFields)
 	if err != nil {
 		resp.Diagnostics.AddError("Sanitize Error", fmt.Sprintf("Failed to sanitize prior response: %s", err))
 		return
@@ -731,8 +742,8 @@ func (r *CurlResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		}
 	}
 
-	// Store the new sanitized response
-	data.Response = types.StringValue(sanitizedResponse)
+	// Store the new sanitized response in the appropriate attribute.
+	setResourceResponseValues(&data, sanitizedResponse)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -779,27 +790,25 @@ func (r *CurlResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	var client *http.Client
 	useDestroyTls := !data.DestroyCertFile.IsNull() || !data.DestroyKeyFile.IsNull() || !data.DestroyCaCertFile.IsNull()
 
+	var destroyTlsConfig *TlsConfig
 	if useDestroyTls {
 		tflog.Debug(ctx, "Using custom TLS client for Destroy() operation")
 
-		destroyTlsConfig := &TlsConfig{
+		destroyTlsConfig = &TlsConfig{
 			CertFile:        data.DestroyCertFile.ValueString(),
 			KeyFile:         data.DestroyKeyFile.ValueString(),
 			CaCertFile:      data.DestroyCaCertFile.ValueString(),
 			CaCertDirectory: data.DestroyCaCertDirectory.ValueString(),
 			SkipTlsVerify:   data.DestroySkipTlsVerify.ValueBool(),
 		}
-
-		tlsClient, err := createTlsClient(destroyTlsConfig)
-		if err != nil {
-			resp.Diagnostics.AddError("Destroy Error", fmt.Sprintf("Failed to create TLS client: %s", err))
-			return
-		}
-		client = tlsClient
 	} else {
-		// Default non-TLS client
 		tflog.Debug(ctx, "Using default HTTP client for Destroy() operation")
-		client = &http.Client{Timeout: 30 * time.Second}
+	}
+
+	client, err := r.providerMeta().NewHTTPClient(destroyTlsConfig)
+	if err != nil {
+		resp.Diagnostics.AddError("Destroy Error", fmt.Sprintf("Failed to create HTTP client: %s", err))
+		return
 	}
 
 	// Build Destroy Request
@@ -815,13 +824,7 @@ func (r *CurlResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	}
 
 	// Add Headers
-	if !data.DestroyHeaders.IsNull() && !data.DestroyHeaders.IsUnknown() {
-		for k, v := range data.DestroyHeaders.Elements() {
-			if strVal, ok := v.(types.String); ok {
-				request.Header.Set(k, strVal.ValueString())
-			}
-		}
-	}
+	applyRequestHeaders(request, data.DestroyHeaders)
 
 	// Add Query Parameters
 	if !data.DestroyRequestParameters.IsNull() && !data.DestroyRequestParameters.IsUnknown() {
@@ -892,7 +895,7 @@ func (r *CurlResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 
 	data.DestroyRequestUrlString = types.StringValue(data.DestroyUrl.ValueString())
 	data.RequestUrlString = types.StringValue(request.URL.String())
-	data.Response = types.StringValue(string(bodyBytes))
+	setResourceResponseValues(&data, string(bodyBytes))
 	data.StatusCode = types.StringValue(strconv.Itoa(statusCode))
 
 	// Remove Resource from State
@@ -1043,6 +1046,16 @@ func (r *CurlResource) UpgradeState(ctx context.Context) map[int64]resource.Stat
 
 					// Clear the extraction errors since we handled them manually
 					resp.Diagnostics = diag.Diagnostics{}
+				}
+
+				// New fields introduced after v0: default response_sensitive
+				// to false and leave sensitive_response empty. This preserves
+				// the prior non-sensitive response behavior on upgrade.
+				if oldState.ResponseSensitive.IsNull() || oldState.ResponseSensitive.IsUnknown() {
+					oldState.ResponseSensitive = types.BoolValue(false)
+				}
+				if oldState.SensitiveResponse.IsNull() || oldState.SensitiveResponse.IsUnknown() {
+					oldState.SensitiveResponse = types.StringValue("")
 				}
 
 				// The key change in v1: set skip_read to true and clear read-related fields

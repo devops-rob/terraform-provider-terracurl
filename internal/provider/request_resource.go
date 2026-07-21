@@ -6,7 +6,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -28,7 +27,6 @@ func NewRequestResource() resource.Resource {
 
 // RequestResource defines the resource implementation.
 type RequestResource struct {
-	client *http.Client
 }
 
 // RequestResourceModel describes the resource data model.
@@ -70,23 +68,18 @@ func (r *RequestResource) Schema(ctx context.Context, req resource.SchemaRequest
 }
 
 func (r *RequestResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
 	}
 
-	client, ok := req.ProviderData.(*http.Client)
-
+	_, ok := req.ProviderData.(*ProviderMeta)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *http.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *ProviderMeta, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
-
 		return
 	}
-
-	r.client = client
 }
 
 func (r *RequestResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

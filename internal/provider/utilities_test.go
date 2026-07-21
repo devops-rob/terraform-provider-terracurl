@@ -6,7 +6,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
+
+	"golang.org/x/net/http/httpproxy"
 )
 
 func TestSanitizeResponse(t *testing.T) {
@@ -74,9 +77,14 @@ func TestResponseCodeChecker(t *testing.T) {
 }
 
 func TestCreateTlsClient(t *testing.T) {
+	proxy := httpproxy.FromEnvironment().ProxyFunc()
+	proxyForRequest := func(req *http.Request) (*url.URL, error) {
+		return proxy(req.URL)
+	}
+
 	t.Run("Default Config", func(t *testing.T) {
 		cfg := defaultTlsConfig()
-		client, err := createTlsClient(cfg)
+		client, err := createTlsClient(cfg, proxyForRequest)
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
@@ -87,7 +95,7 @@ func TestCreateTlsClient(t *testing.T) {
 
 	t.Run("Invalid Cert File", func(t *testing.T) {
 		cfg := &TlsConfig{CertFile: "nonexistent.pem", KeyFile: "nonexistent-key.pem"}
-		client, err := createTlsClient(cfg)
+		client, err := createTlsClient(cfg, proxyForRequest)
 		if err == nil {
 			t.Error("Expected error for invalid cert file, got nil")
 		}
@@ -105,7 +113,10 @@ func TestTlsClientRequests(t *testing.T) {
 	defer server.Close()
 
 	cfg := &TlsConfig{SkipTlsVerify: true}
-	client, err := createTlsClient(cfg)
+	proxy := httpproxy.FromEnvironment().ProxyFunc()
+	client, err := createTlsClient(cfg, func(req *http.Request) (*url.URL, error) {
+		return proxy(req.URL)
+	})
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
