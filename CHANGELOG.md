@@ -6,6 +6,11 @@ BUG FIXES:
 - Avoid false post-creation drift when the prior sanitized response is null.
 - Refactor `responseCodeChecker` for simpler call sites across resource, action, and tests. Based on #149 by @JackSlateur.
 
+ENHANCEMENTS:
+
+- Bump `hashicorp/setup-terraform` GitHub Action from v4.0.0 to v4.0.1. Supersedes Dependabot PR #147.
+- Bump `golang.org/x/net` from v0.53.0 to v0.57.0. Supersedes Dependabot PR #156.
+
 ## 2.5.0
 
 FEATURES:
