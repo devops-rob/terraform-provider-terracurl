@@ -16,6 +16,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"regexp"
 	"testing"
 	"time"
 )
@@ -1213,6 +1214,7 @@ func TestCurlResource_StateUpgrade(t *testing.T) {
 
 			// Read-related fields
 			"skip_read":                    schema.BoolAttribute{Optional: true},
+			"read_after_write":             schema.BoolAttribute{Optional: true},
 			"read_url":                     schema.StringAttribute{Optional: true},
 			"read_method":                  schema.StringAttribute{Optional: true},
 			"read_headers":                 schema.MapAttribute{ElementType: types.StringType, Optional: true},
@@ -2152,4 +2154,165 @@ func TestCurlResource_Delete_ProviderDefaultHeadersOverridesStaleState(t *testin
 	if receivedAuth != "Bearer fresh" {
 		t.Fatalf("expected destroy to use fresh provider Authorization header, got %q", receivedAuth)
 	}
+}
+
+// TestAccresourceCurlReadAfterWrite verifies that when read_after_write is enabled the
+// canonical read response is persisted in state instead of the create response body.
+// This matters for APIs that acknowledge writes with a status envelope (for example
+// {"Success":true}) but return the full object on read.
+func TestAccresourceCurlReadAfterWrite(t *testing.T) {
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+	httpmock.RegisterResponder(
+		"POST",
+		"https://example.com/create",
+		httpmock.NewStringResponder(200, `{"Success":true,"Message":"created"}`),
+	)
+	httpmock.RegisterResponder(
+		"GET",
+		"https://example.com/read",
+		httpmock.NewStringResponder(200, `{"name":"devopsrob"}`),
+	)
+
+	rName := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccresourceCurlReadAfterWrite(rName),
+				Check: resource.ComposeTestCheckFunc(
+					// State holds the read response, not the create acknowledgement.
+					resource.TestCheckResourceAttr("terracurl_request.test", "response", `{"name":"devopsrob"}`),
+					resource.TestCheckResourceAttr("terracurl_request.test", "status_code", "200"),
+					testMockEndpointRegister("GET https://example.com/read"),
+				),
+			},
+		},
+	})
+}
+
+func testAccresourceCurlReadAfterWrite(name string) string {
+	return fmt.Sprintf(`
+resource "terracurl_request" "test" {
+  name           = "%s"
+  url            = "https://example.com/create"
+  method         = "POST"
+  request_body   = "{}"
+  response_codes = ["200"]
+
+  read_after_write = true
+  skip_read        = true
+  skip_destroy     = true
+
+  read_url            = "https://example.com/read"
+  read_method         = "GET"
+  read_response_codes = ["200"]
+}
+`, name)
+}
+
+// TestAccresourceCurlReadAfterWriteDefaultsOff verifies the default (false) preserves the
+// existing behaviour of storing the create response in state.
+func TestAccresourceCurlReadAfterWriteDefaultsOff(t *testing.T) {
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+	httpmock.RegisterResponder(
+		"POST",
+		"https://example.com/create",
+		httpmock.NewStringResponder(200, `{"Success":true}`),
+	)
+	httpmock.RegisterResponder(
+		"GET",
+		"https://example.com/read",
+		httpmock.NewStringResponder(200, `{"name":"devopsrob"}`),
+	)
+
+	rName := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		// The read endpoint must not be called during create when the feature is off.
+		CheckDestroy: testMockEndpointCount("GET https://example.com/read", 0),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccresourceCurlReadAfterWriteDefaultsOff(rName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("terracurl_request.test", "response", `{"Success":true}`),
+					resource.TestCheckResourceAttr("terracurl_request.test", "read_after_write", "false"),
+				),
+			},
+		},
+	})
+}
+
+func testAccresourceCurlReadAfterWriteDefaultsOff(name string) string {
+	return fmt.Sprintf(`
+resource "terracurl_request" "test" {
+  name           = "%s"
+  url            = "https://example.com/create"
+  method         = "POST"
+  request_body   = "{}"
+  response_codes = ["200"]
+
+  skip_read    = true
+  skip_destroy = true
+
+  read_url            = "https://example.com/read"
+  read_method         = "GET"
+  read_response_codes = ["200"]
+}
+`, name)
+}
+
+// TestAccresourceCurlReadAfterWriteMissingReadFields verifies the configuration is rejected
+// when read_after_write is enabled without the read attributes it depends on.
+func TestAccresourceCurlReadAfterWriteMissingReadFields(t *testing.T) {
+	t.Setenv("TF_ACC", "true")
+	t.Setenv("USE_DEFAULT_CLIENT_FOR_TESTS", "true")
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+	httpmock.RegisterResponder(
+		"POST",
+		"https://example.com/create",
+		httpmock.NewStringResponder(200, `{"Success":true}`),
+	)
+
+	rName := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccresourceCurlReadAfterWriteMissingReadFields(rName),
+				ExpectError: regexp.MustCompile(`read_after_write`),
+			},
+		},
+	})
+}
+
+func testAccresourceCurlReadAfterWriteMissingReadFields(name string) string {
+	return fmt.Sprintf(`
+resource "terracurl_request" "test" {
+  name           = "%s"
+  url            = "https://example.com/create"
+  method         = "POST"
+  request_body   = "{}"
+  response_codes = ["200"]
+
+  read_after_write = true
+  skip_read        = true
+  skip_destroy     = true
+}
+`, name)
 }
