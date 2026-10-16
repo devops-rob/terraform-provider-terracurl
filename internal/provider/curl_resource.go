@@ -5,9 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -25,7 +23,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -165,9 +162,6 @@ func (r *CurlResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
-				Validators: []validator.String{
-					stringvalidator.PreferWriteOnlyAttribute(path.MatchRoot("request_body_wo")),
-				},
 			},
 			"request_body_wo":         writeOnlyBodySchema("Write-only request body for the create call. Not stored in Terraform state. Requires Terraform 1.11 or later."),
 			"request_body_wo_version": writeOnlyVersionSchema("Increment to trigger applying an updated `request_body_wo` value."),
@@ -179,9 +173,6 @@ func (r *CurlResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 				MarkdownDescription: "Map of headers to attach to the API call." + hostHeaderMarkdownSuffix,
 				PlanModifiers: []planmodifier.Map{
 					mapplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.Map{
-					mapvalidator.PreferWriteOnlyAttribute(path.MatchRoot("headers_wo")),
 				},
 			},
 			"headers_wo":         writeOnlyHeadersSchema("Write-only headers for the create call. Not stored in Terraform state. Requires Terraform 1.11 or later."),
@@ -302,9 +293,6 @@ func (r *CurlResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
-				Validators: []validator.String{
-					stringvalidator.PreferWriteOnlyAttribute(path.MatchRoot("destroy_request_body_wo")),
-				},
 			},
 			"destroy_request_body_wo":         writeOnlyBodySchema("Write-only request body for the destroy call. Not stored in Terraform state."),
 			"destroy_request_body_wo_version": writeOnlyVersionSchema("Increment to trigger applying an updated `destroy_request_body_wo` value."),
@@ -316,9 +304,6 @@ func (r *CurlResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 				MarkdownDescription: "Map of headers to attach to the destroy API call." + hostHeaderMarkdownSuffix + " Values support `{response.<path>}` placeholders resolved from the stored create response at destroy time.",
 				PlanModifiers: []planmodifier.Map{
 					mapplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.Map{
-					mapvalidator.PreferWriteOnlyAttribute(path.MatchRoot("destroy_headers_wo")),
 				},
 			},
 			"destroy_headers_wo":         writeOnlyHeadersSchema("Write-only headers for the destroy call. Snapshotted in provider private state for use during destroy."),
@@ -412,9 +397,6 @@ func (r *CurlResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 				ElementType:         types.StringType,
 				Optional:            true,
 				MarkdownDescription: "Map of headers for the read request." + hostHeaderMarkdownSuffix,
-				Validators: []validator.Map{
-					mapvalidator.PreferWriteOnlyAttribute(path.MatchRoot("read_headers_wo")),
-				},
 			},
 			"read_headers_wo":         writeOnlyHeadersSchema("Write-only headers for the read call. Snapshotted in provider private state for drift detection."),
 			"read_headers_wo_version": writeOnlyVersionSchema("Increment to trigger refreshing snapshotted `read_headers_wo` values."),
@@ -423,9 +405,6 @@ func (r *CurlResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 			"read_request_body": schema.StringAttribute{
 				Optional:            true,
 				MarkdownDescription: "Optional request body to use for the read request.",
-				Validators: []validator.String{
-					stringvalidator.PreferWriteOnlyAttribute(path.MatchRoot("read_request_body_wo")),
-				},
 			},
 			"read_request_body_wo":         writeOnlyBodySchema("Write-only request body for the read call. Snapshotted in provider private state for drift detection."),
 			"read_request_body_wo_version": writeOnlyVersionSchema("Increment to trigger refreshing snapshotted `read_request_body_wo` values."),
