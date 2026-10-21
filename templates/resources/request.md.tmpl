@@ -13,4 +13,24 @@ TerraCurl request resource
 
 When `skip_read` is `false` and `read_url`, `read_method`, and `read_response_codes` are configured, TerraCurl compares the stored response with the live read response during planning. If the remote state diverges (including an unexpected read HTTP status code), Terraform plans a **replace** (destroy then create) so configuration can be reconciled. Use `ignore_response_fields` to exclude volatile JSON fields from comparison. Drift remediation is replace-only; there is no in-place update of remote state.
 
+## Storing the read response after a write
+
+Some APIs acknowledge a write with a status envelope (for example `{"Success":true}`) rather than returning the object that was written. Because drift detection compares the stored response against the read response, storing that envelope means the two shapes can never match and every subsequent plan reports drift and proposes a replacement.
+
+Set `read_after_write` to `true` to make TerraCurl call the read endpoint immediately after a successful create or update and persist that response in state instead of the write response. Later reads then compare like for like.
+
+`read_url`, `read_method`, and `read_response_codes` must be configured when `read_after_write` is enabled.
+
+`read_after_write` is independent of `skip_read`:
+
+| `read_after_write` | `skip_read` | Behaviour |
+| --- | --- | --- |
+| `false` (default) | `true` | Write response stored; no refresh reads. Existing default behaviour. |
+| `true` | `true` | Read response stored after each write, but refresh does not re-read. |
+| `true` | `false` | Read response stored after each write **and** refresh re-reads, so external changes are detected. |
+
+If the read call returns a status code outside `read_response_codes`, or its body cannot be sanitised, TerraCurl emits a warning and keeps the write response in state rather than failing the apply.
+
+{{ tffile "examples/resources/read_after_write_example/resource.tf" }}
+
 {{ .SchemaMarkdown }}
